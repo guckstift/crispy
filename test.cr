@@ -1,0 +1,10 @@
+var return = 23;
+print return;
+var x;
+var y = null;
+print y;
+x = y;
+y = 42;
+return = true;
+print y;
+print false;
