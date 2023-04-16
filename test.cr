@@ -1,10 +1,11 @@
 function foo()
 {
-	print x;
-	print y;
+	bar();
+}
+
+function bar()
+{
+	print true;
 }
 
 foo();
-
-var x = 90;
-var y = x;

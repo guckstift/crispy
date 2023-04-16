@@ -90,7 +90,19 @@ static void g_vardecl_assign(Stmt *vardecl)
 	}
 	
 	if(vardecl->early_use) {
-		fprintf(file, "\t""init_%s = 1;\n", vardecl->ident->text);
+		fprintf(file, "\t");
+		g_initvar(vardecl->ident);
+		fprintf(file, " = 1;\n");
+	}
+}
+
+static void g_vardecl_stmt(Stmt *vardecl)
+{
+	if(vardecl->scope->parent) {
+		g_local_vardecl(vardecl);
+	}
+	else {
+		g_vardecl_assign(vardecl);
 	}
 }
 
@@ -117,6 +129,21 @@ static void g_funcdecl(Stmt *funcdecl)
 	fprintf(file, " = {.type = TY_FUNCTION, .func = ");
 	g_funcname(funcdecl->ident);
 	fprintf(file, "};\n");
+	
+	if(funcdecl->early_use) {
+		fprintf(file, "int ");
+		g_initvar(funcdecl->ident);
+		fprintf(file, " = 0;\n");
+	}
+}
+
+static void g_funcdecl_init(Stmt *funcdecl)
+{
+	if(funcdecl->early_use) {
+		fprintf(file, "\t");
+		g_initvar(funcdecl->ident);
+		fprintf(file, " = 1;\n");
+	}
 }
 
 static void g_call(Stmt *call)
@@ -138,19 +165,16 @@ static void g_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
 		case ST_VARDECL:
-			if(stmt->scope->parent) {
-				g_local_vardecl(stmt);
-			}
-			else {
-				g_vardecl_assign(stmt);
-			}
-			
+			g_vardecl_stmt(stmt);
 			break;
 		case ST_ASSIGN:
 			g_assign(stmt);
 			break;
 		case ST_PRINT:
 			g_print(stmt);
+			break;
+		case ST_FUNCDECL:
+			g_funcdecl_init(stmt);
 			break;
 		case ST_CALL:
 			g_call(stmt);

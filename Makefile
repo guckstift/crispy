@@ -18,6 +18,7 @@ test: test.c
 
 test.c: crispy test.cr
 	./crispy test.cr $@
+	cat $@
 
 src/%.res.h: src/%
 	python3 embed_res.py $^ $@

@@ -57,7 +57,6 @@ typedef struct Stmt {
 	};
 	
 	union {
-		int early_use; // vardecl
 		DeclList *used_vars; // funcdecl
 		struct Stmt *decl; // assign
 	};
@@ -65,6 +64,8 @@ typedef struct Stmt {
 	union {
 		struct Stmt *next_decl; // vardecl, funcdecl
 	};
+	
+	int early_use; // vardecl, funcdecl
 } Stmt;
 
 typedef struct Scope {
