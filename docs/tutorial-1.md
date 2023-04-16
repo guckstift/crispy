@@ -4,7 +4,7 @@ In this tutorial series we will create a dynamic programming language that is
 pretty much like JavaScript or Python and gets compiled to C code. Bytecode is
 nice and relatively simple to implement. Python uses bytecode. But performance
 can be much better with natively compiled code. Spitting out C code is a lazy
-but effective way to get started when we want out language to translate to a
+but effective way to get started when we want our language to translate to a
 native executable.
 
 Our language will be stupidly simple at first. It will feature only 3
@@ -15,9 +15,8 @@ than a toy language. But it will be a good starting point built on a solid
 project structure to extend on in later parts.
 
 Let's call our language `crispy`. I just think this sounds catchy and we could
-extend our source file names with `.cr`. You can imagine the compiler snacking
-one such source file and digesting it into a C file within these 4 well defined
-steps:
+extend our source file names with `.cr`. The compiler will snack a single source
+file and digest it into a C file within these 4 well defined steps:
 
 1. lexical analysis (`lex`) - chop the source code into *tokens*
 2. parsing (`parse`) - create a tree structure from the token list
@@ -26,11 +25,10 @@ steps:
 
 ## Language
 
-Let's first specify how our language looks like. The more precisely we are
-describing and specifying it, the more straight forward the development process
-gets.
+Let's first specify how our language should look like. The more precisely we
+describe and specify it, the more straight forward the development process gets.
 
-So let's start with statements. Like I said: `crispy` has 3 of them:
+So let's start with statements. Like I said: `crispy` has only 3 of them:
 
 ### The variable declaration
 
@@ -48,43 +46,44 @@ A variable `x` can only be declared once. Otherwise the compiler cries.
 
 ### The variable assignment
 
-Variables that were introduced by previous declarations can be (re-)assigned to
-new values.
+Variables previously introduced by a declaration can be (re-)assigned to new
+values.
 
 *IDENT* = *expr* ;
 
-Since `crispy` is a dynamic language the type of *expr* doesn't have to be the
-same as the initial values type.
+Since `crispy` is a dynamic language the type of *expr* can be any type no
+matter what value the variable was assigned before.
 
-Trying to assign a variable that is not declared (yet) is of course an error.
+Trying to assign a variable that is not declared (yet) isn't allowed of course.
 
 ### The print statement
 
-We also support a built-in print statement:
+Last but not least `crispy` also provides a built-in print statement:
 
 **print** *expr* ;
 
-It prints a single value on a seperate line of the standard output stream
-(prints the value and a line break).
+It prints a single value on a seperate line to the standard output stream
+(appending a line break after it).
 
 ### Types
 
 Now let's talk about our type system. `crispy` should support dynamic typing
-which simply means: variables are not bound to a fixed type. They can hold
-values of varying types over their lifetime.
+which simply means: variables are not bound to a fixed type. The type can
+change over the variables lifetime.
 
 In our first version of `crispy` these 3 types will be sufficient:
 
 * the null type which has only one valid value `null`. This is the value that a
   variable gets implicitly initialized with by default.
-* boolean is the well known type which knows only either `true` or `false`
+* a boolean type, as you might expect, only has `true` or `false` values.
 * an integer type which features 64 bit signed integer
-  numbers (allthough we won't have any operator to form negative numbers yet)
+  numbers (sadly we won't implement any operators yet to form negative numbers
+  yet).
 
-Yes, we don't have strings and arrays or even objects yet. These would
-introduce a lot more issues to tackle and questions to be answered which we
-should not try to for the start. Extending our language later will be
-comfortable once we implemented a minimal viable version.
+Yes, we don't have strings, arrays or even objects yet. These would
+introduce a lot more issues to tackle and questions to be answered. We try to
+keep things simple for the start. Extending our language later will be
+comfortable once we implemented a minimal base.
 
 ### Expressions
 

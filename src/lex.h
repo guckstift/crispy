@@ -9,6 +9,7 @@
 	f(true) \
 	f(false) \
 	f(null) \
+	f(function) \
 
 typedef enum {
 	TK_UNKNOWN,

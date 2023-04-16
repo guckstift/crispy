@@ -4,8 +4,10 @@
 #include <stdarg.h>
 #include "analyze.h"
 
-static Stmt *first_decl = 0;
-static Stmt *last_decl = 0;
+static void a_block(Block *block);
+
+static Scope *cur_scope = 0;
+static Stmt *cur_funcdecl = 0;
 
 static void error(int line, char *msg, ...)
 {
@@ -19,70 +21,87 @@ static void error(int line, char *msg, ...)
 	exit(EXIT_FAILURE);
 }
 
-static Stmt *lookup(Token *ident)
+static void add_used_var(Stmt *decl)
 {
-	for(Stmt *decl = first_decl; decl; decl = decl->next_decl) {
-		if(strcmp(decl->ident->text, ident->text) == 0) {
-			return decl;
+	DeclList *vars = cur_funcdecl->used_vars;
+	
+	for(DeclItem *item = vars->first_item; item; item = item->next) {
+		if(decl == item->decl) {
+			return;
 		}
 	}
 	
-	return 0;
+	DeclItem *item = calloc(1, sizeof(DeclItem));
+	item->decl = decl;
+	
+	if(vars->first_item) {
+		vars->last_item->next = item;
+	}
+	else {
+		vars->first_item = item;
+	}
+	
+	vars->last_item = item;
+}
+
+static Stmt *a_ident(Token *ident)
+{
+	Stmt *decl = lookup(ident, cur_scope);
+	
+	if(!decl) {
+		error(
+			ident->line, "could not find %s in scope %p",
+			ident->text, cur_scope
+		);
+	}
+	else if(decl->scope == cur_scope && ident < decl->end) {
+		error(ident->line, "%s is declared later", ident->text);
+	}
+	else if(ident < decl->end) {
+		decl->early_use = 1;
+		add_used_var(decl);
+	}
+	
+	return decl;
 }
 
 static void a_expr(Expr *expr)
 {
 	if(expr->type == EX_VAR) {
-		if(lookup(expr->ident) == 0) {
-			error(
-				expr->ident->line,
-				"could not find variable %s",
-				expr->ident->text
-			);
-		}
+		a_ident(expr->ident);
 	}
 }
 
 static void a_vardecl(Stmt *vardecl)
 {
-	if(lookup(vardecl->ident)) {
-		error(
-			vardecl->ident->line,
-			"variable %s already declared",
-			vardecl->ident->text
-		);
-	}
-	
 	if(vardecl->init) {
 		a_expr(vardecl->init);
 	}
-	
-	if(first_decl) {
-		last_decl->next_decl = vardecl;
-	}
-	else {
-		first_decl = vardecl;
-	}
-	
-	last_decl = vardecl;
 }
 
 static void a_assign(Stmt *assign)
 {
-	if(lookup(assign->ident) == 0) {
-		error(
-			assign->ident->line,
-			"could not find variable %s",
-			assign->ident->text
-		);
-	}
-	
+	assign->decl = a_ident(assign->ident);
 	a_expr(assign->value);
 }
 
 static void a_print(Stmt *print)
 {
 	a_expr(print->value);
+}
+
+static void a_funcdecl(Stmt *funcdecl)
+{
+	Stmt *old_funcdecl = cur_funcdecl;
+	cur_funcdecl = funcdecl;
+	funcdecl->used_vars = calloc(1, sizeof(DeclList));
+	a_block(funcdecl->body);
+	cur_funcdecl = old_funcdecl;
+}
+
+static void a_call(Stmt *call)
+{
+	a_ident(call->ident);
 }
 
 static void a_stmt(Stmt *stmt)
@@ -97,19 +116,28 @@ static void a_stmt(Stmt *stmt)
 		case ST_PRINT:
 			a_print(stmt);
 			break;
+		case ST_FUNCDECL:
+			a_funcdecl(stmt);
+			break;
+		case ST_CALL:
+			a_call(stmt);
+			break;
 	}
 }
 
-static void a_stmts(Stmt *stmts)
+static void a_block(Block *block)
 {
-	for(Stmt *stmt = stmts; stmt; stmt = stmt->next) {
+	cur_scope = block->scope;
+	
+	for(Stmt *stmt = block->stmts; stmt; stmt = stmt->next) {
 		a_stmt(stmt);
 	}
+	
+	cur_scope = cur_scope->parent;
 }
 
 void analyze(Module *module)
 {
-	first_decl = 0;
-	last_decl = 0;
-	a_stmts(module->stmts);
+	cur_scope = 0;
+	a_block(module->block);
 }

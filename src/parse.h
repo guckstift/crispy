@@ -13,6 +13,8 @@ typedef enum {
 
 typedef struct {
 	ExprType type;
+	int isconst;
+	
 	union {
 		int64_t value;
 		Token *ident;
@@ -23,29 +25,66 @@ typedef enum {
 	ST_VARDECL,
 	ST_ASSIGN,
 	ST_PRINT,
+	ST_FUNCDECL,
+	ST_CALL,
 } StmtType;
+
+typedef struct DeclItem {
+	struct Stmt *decl;
+	struct DeclItem *next;
+} DeclItem;
+
+typedef struct {
+	DeclItem *first_item;
+	DeclItem *last_item;
+} DeclList;
 
 typedef struct Stmt {
 	StmtType type;
-	union {
-		Token *ident;
-	};
-	union {
-		Expr *init;
-		Expr *value;
-	};
-	union {
-		struct Stmt *next_decl;
-	};
+	Token *start;
+	Token *end;
+	struct Scope *scope;
 	struct Stmt *next;
+	
+	union {
+		Token *ident; // vardecl, assign, funcdecl, call
+	};
+	
+	union {
+		Expr *init; // vardecl
+		Expr *value; // assign, print
+		struct Block *body; // funcdecl
+	};
+	
+	union {
+		int early_use; // vardecl
+		DeclList *used_vars; // funcdecl
+		struct Stmt *decl; // assign
+	};
+	
+	union {
+		struct Stmt *next_decl; // vardecl, funcdecl
+	};
 } Stmt;
 
-typedef struct {
+typedef struct Scope {
+	struct Scope *parent;
+	Stmt *first_decl;
+	Stmt *last_decl;
+} Scope;
+
+typedef struct Block {
 	Stmt *stmts;
-	Stmt *decls;
+	Scope *scope;
+} Block;
+
+typedef struct {
+	Block *block;
 } Module;
 
+Stmt *lookup(Token *ident, Scope *scope);
 Module *parse(Token *tokens);
+void print_scope(Scope *scope);
 void print_module(Module *module);
 
 #endif
