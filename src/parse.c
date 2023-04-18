@@ -207,7 +207,7 @@ Module *parse(Token *tokens)
 		error("unknown statement");
 	}
 	
-	Module *module = malloc(sizeof(Module));
+	Module *module = calloc(1, sizeof(Module));
 	module->stmts = stmts;
 	module->decls = 0;
 	

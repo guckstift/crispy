@@ -11,7 +11,6 @@
 	f(null) \
 
 typedef enum {
-	TK_UNKNOWN,
 	TK_KEYWORD,
 	TK_IDENT,
 	TK_INT,
