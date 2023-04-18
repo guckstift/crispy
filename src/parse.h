@@ -9,15 +9,25 @@ typedef enum {
 	EX_BOOL,
 	EX_INT,
 	EX_VAR,
+	EX_BINOP,
 } ExprType;
 
-typedef struct {
+typedef struct Expr {
 	ExprType type;
 	int isconst;
 	
 	union {
 		int64_t value;
 		Token *ident;
+		struct Expr *left;
+	};
+	
+	union {
+		struct Expr *right;
+	};
+	
+	union {
+		char op;
 	};
 } Expr;
 

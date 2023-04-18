@@ -62,7 +62,7 @@ Token *lex(char *src, char *src_end)
 		}
 		else if(
 			*src == ';' || *src == '=' || *src == '(' || *src == ')' ||
-			*src == '{' || *src == '}'
+			*src == '{' || *src == '}' || *src == '+' || *src == '-'
 		) {
 			token = (Token){.type = TK_PUNCT, .punct = *src, .line = line};
 			src ++;

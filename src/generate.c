@@ -1,6 +1,8 @@
 #include "generate.h"
 #include "runtime.c.res.h"
 
+static void g_expr(Expr *expr, int in_decl_init);
+
 static FILE *file = 0;
 
 static void g_ident(Token *ident)
@@ -18,7 +20,7 @@ static void g_initvar(Token *ident)
 	fprintf(file, "init_%s", ident->text);
 }
 
-static void g_expr(Expr *expr, int in_decl_init)
+static void g_atom(Expr *expr, int in_decl_init)
 {
 	if(!in_decl_init && expr->isconst) {
 		fprintf(file, "(Value)");
@@ -36,6 +38,29 @@ static void g_expr(Expr *expr, int in_decl_init)
 			break;
 		case EX_VAR:
 			g_ident(expr->ident);
+			break;
+	}
+}
+
+static void g_binop(Expr *expr, int in_decl_init)
+{
+	fprintf(file, "(Value){.type = TY_INT, .value = (");
+	fprintf(file, "check_type(TY_NULL, TY_INT, ");
+	g_expr(expr->left, in_decl_init);
+	fprintf(file, ")).value %c (", expr->op);
+	fprintf(file, "check_type(TY_NULL, TY_INT, ");
+	g_expr(expr->right, in_decl_init);
+	fprintf(file, ")).value}");
+}
+
+static void g_expr(Expr *expr, int in_decl_init)
+{
+	switch(expr->type) {
+		case EX_BINOP:
+			g_binop(expr, in_decl_init);
+			break;
+		default:
+			g_atom(expr, in_decl_init);
 			break;
 	}
 }

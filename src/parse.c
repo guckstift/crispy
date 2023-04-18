@@ -94,7 +94,7 @@ static Token *eat_punct(char punct)
 	return 0;
 }
 
-static Expr *p_expr()
+static Expr *p_atom()
 {
 	Token *token;
 	
@@ -104,8 +104,8 @@ static Expr *p_expr()
 	(token = eat_keyword(KW_false)) ||
 	(token = eat_keyword(KW_null)) ;
 	
-	if(token == 0) {
-		error("expected identifier, boolean, integer or null");
+	if(!token) {
+		return 0;
 	}
 	
 	Expr *expr = calloc(1, sizeof(Expr));
@@ -136,6 +136,48 @@ static Expr *p_expr()
 	}
 	
 	return expr;
+}
+
+static Expr *p_binop()
+{
+	Expr *left = p_atom();
+	
+	Token *op;
+	
+	while((op = eat_punct('+')) || (op = eat_punct('-'))) {
+		Expr *right = p_atom();
+		
+		if(!right) {
+			error("expected right side of %c", op->punct);
+		}
+		
+		if(left->isconst && right->isconst) {
+			Expr *sum = calloc(1, sizeof(Expr));
+			sum->type = EX_INT;
+			sum->isconst = 1;
+			sum->value = op->punct == '+'
+				? left->value + right->value
+				: left->value - right->value;
+			left = sum;
+		}
+		else {
+			Expr *binop = calloc(1, sizeof(Expr));
+			binop->type = EX_BINOP;
+			binop->isconst = 0;
+			binop->left = left;
+			binop->right = right;
+			binop->op = op->punct;
+			left = binop;
+		}
+		
+	}
+	
+	return left;
+}
+
+static Expr *p_expr()
+{
+	return p_binop();
 }
 
 static Stmt *p_vardecl()
@@ -406,6 +448,11 @@ static void print_expr(Expr *expr)
 			break;
 		case EX_VAR:
 			printf("%s", expr->ident->text);
+			break;
+		case EX_BINOP:
+			print_expr(expr->left);
+			printf("%c", expr->op);
+			print_expr(expr->right);
 			break;
 	}
 }

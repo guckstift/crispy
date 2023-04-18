@@ -17,7 +17,12 @@ typedef struct {
 	};
 } Value;
 
-void print(Value value) {
+static void error(char *msg) {
+	fprintf(stderr, "error: %s\n", msg);
+	exit(EXIT_FAILURE);
+}
+
+static void print(Value value) {
 	switch(value.type) {
 		case TY_NULL:
 			printf("null\n");
@@ -34,7 +39,11 @@ void print(Value value) {
 	}
 }
 
-static void error(char *msg) {
-	fprintf(stderr, "error: %s\n", msg);
-	exit(EXIT_FAILURE);
+static Value check_type(Type mintype, Type maxtype, Value value)
+{
+	if(value.type < mintype || value.type > maxtype) {
+		error("wrong type");
+	}
+	
+	return value;
 }

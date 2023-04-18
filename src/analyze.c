@@ -70,6 +70,10 @@ static void a_expr(Expr *expr)
 	if(expr->type == EX_VAR) {
 		a_ident(expr->ident);
 	}
+	else if(expr->type == EX_BINOP) {
+		a_expr(expr->left);
+		a_expr(expr->right);
+	}
 }
 
 static void a_vardecl(Stmt *vardecl)
