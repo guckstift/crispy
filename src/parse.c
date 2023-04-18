@@ -136,14 +136,38 @@ static Expr *p_atom()
 	return expr;
 }
 
+static Expr *p_call_or_atom()
+{
+	Token *ident = eat_token(TK_IDENT);
+	
+	if(!ident) {
+		return p_atom();
+	}
+	
+	if(!eat_punct('(')) {
+		cur = ident;
+		return p_atom();
+	}
+	
+	if(!eat_punct(')')) {
+		error("expected ')' after '('");
+	}
+	
+	Expr *expr = calloc(1, sizeof(Expr));
+	expr->type = EX_CALL;
+	expr->isconst = 0;
+	expr->ident = ident;
+	return expr;
+}
+
 static Expr *p_binop()
 {
-	Expr *left = p_atom();
+	Expr *left = p_call_or_atom();
 	
 	Token *op;
 	
 	while((op = eat_punct('+')) || (op = eat_punct('-'))) {
-		Expr *right = p_atom();
+		Expr *right = p_call_or_atom();
 		
 		if(!right) {
 			error("expected right side of %c", op->punct);

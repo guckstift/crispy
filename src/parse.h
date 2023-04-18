@@ -10,6 +10,7 @@ typedef enum {
 	EX_INT,
 	EX_VAR,
 	EX_BINOP,
+	EX_CALL,
 } ExprType;
 
 typedef struct Expr {

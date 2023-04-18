@@ -53,11 +53,30 @@ static void g_binop(Expr *expr, int in_decl_init)
 	fprintf(file, ")).value}");
 }
 
+static void g_callexpr(Expr *call)
+{
+	fprintf(file, "(");
+	g_ident(call->ident);
+	
+	fprintf(
+		file,
+		".type != TY_FUNCTION ? "
+		"(error(\"%s is not callable\"), NULL_VALUE) : ",
+		call->ident->text
+	);
+	
+	g_ident(call->ident);
+	fprintf(file, ".func())");
+}
+
 static void g_expr(Expr *expr, int in_decl_init)
 {
 	switch(expr->type) {
 		case EX_BINOP:
 			g_binop(expr, in_decl_init);
+			break;
+		case EX_CALL:
+			g_callexpr(expr);
 			break;
 		default:
 			g_atom(expr, in_decl_init);

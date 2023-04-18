@@ -1,14 +1,9 @@
 function foo()
 {
+	var x = 90;
 	return x;
 }
 
-var x = 0;
-
 foo();
-
-function bar()
-{
-}
-
-bar();
+print foo();
+print true;

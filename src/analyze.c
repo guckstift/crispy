@@ -74,6 +74,9 @@ static void a_expr(Expr *expr)
 		a_expr(expr->left);
 		a_expr(expr->right);
 	}
+	else if(expr->type == EX_CALL) {
+		a_ident(expr->ident);
+	}
 }
 
 static void a_vardecl(Stmt *vardecl)

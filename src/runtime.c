@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#define NULL_VALUE ((Value){.type = TY_NULL})
+
 typedef enum {
 	TY_NULL,
 	TY_BOOL,
