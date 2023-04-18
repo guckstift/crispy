@@ -54,6 +54,28 @@ Token *lex(char *src, char *src_end)
 				}
 			}
 		}
+		else if(src[0] == '0' && src[1] == 'x') {
+			src += 2;
+			int64_t value = 0;
+			
+			while(isxdigit(*src)) {
+				value *= 16;
+				
+				if(*src >= '0' && *src <= '9') {
+					value += *src - '0';
+				}
+				else if(*src >= 'a' && *src <= 'f') {
+					value += *src - 'a' + 10;
+				}
+				else if(*src >= 'A' && *src <= 'F') {
+					value += *src - 'A' + 10;
+				}
+				
+				src ++;
+			}
+			
+			token = (Token){.type = TK_INT, .value = value, .line = line};
+		}
 		else if(isdigit(*src)) {
 			int64_t value = 0;
 			

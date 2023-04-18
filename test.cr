@@ -1,5 +1,1 @@
-function foo()
-{
-}
-
-# print null + false - foo;
+print 0xfF;
