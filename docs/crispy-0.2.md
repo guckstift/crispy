@@ -35,9 +35,10 @@ KEYWORD = [a-zA-Z_] [a-zA-Z_0-9]* & (
 	"var" | "print" | "true" | "false" | "null" | "function"
 ) ;
 
-INT = decint | hexint ;
+INT = decint | hexint | binint;
 decint = [0-9]+ ;
 hexint = "0x" [0-9a-fA-F]* ;
+binint = "0b" [01]* ;
 
 PUNCT = ";" | "=" | "(" | ")" | "{" | "}" | "+" | "-" ;
 
@@ -111,6 +112,7 @@ An expression is one of these:
 
 * a decimal integer literal (`decint`)
 * a hexadecimal integer literal (`hexint`)
+* a binary integer literal (`binint`)
 * a variable identifier (`IDENT`)
 * a boolean literal (`true` or `false`)
 * the `null` value
