@@ -27,7 +27,12 @@ Token *lex(char *src, char *src_end)
 	while(src <= src_end) {
 		Token token = {.type = TK_UNKNOWN};
 		
-		if(isalpha(*src) || *src == '_') {
+		if(*src == '#') {
+			while(src <= src_end && *src != '\n') {
+				src++;
+			}
+		}
+		else if(isalpha(*src) || *src == '_') {
 			char *start = src;
 			
 			while(isalnum(*src) || *src == '_') {

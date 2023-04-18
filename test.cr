@@ -2,4 +2,4 @@ function foo()
 {
 }
 
-print null + false - foo;
+# print null + false - foo;
