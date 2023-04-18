@@ -108,6 +108,11 @@ static void a_call(Stmt *call)
 	a_ident(call->ident);
 }
 
+static void a_return(Stmt *returnstmt)
+{
+	a_expr(returnstmt->value);
+}
+
 static void a_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
@@ -125,6 +130,9 @@ static void a_stmt(Stmt *stmt)
 			break;
 		case ST_CALL:
 			a_call(stmt);
+			break;
+		case ST_RETURN:
+			a_return(stmt);
 			break;
 	}
 }

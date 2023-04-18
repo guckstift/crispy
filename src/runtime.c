@@ -9,11 +9,11 @@ typedef enum {
 	TY_FUNCTION,
 } Type;
 
-typedef struct {
+typedef struct Value {
 	Type type;
 	union {
 		int64_t value;
-		void (*func)();
+		struct Value (*func)();
 	};
 } Value;
 

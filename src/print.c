@@ -103,6 +103,12 @@ static void print_call(Stmt *assign)
 	printf("()");
 }
 
+static void print_return(Stmt *returnstmt)
+{
+	printf("return ");
+	print_expr(returnstmt->value);
+}
+
 static void print_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
@@ -120,6 +126,9 @@ static void print_stmt(Stmt *stmt)
 			break;
 		case ST_CALL:
 			print_call(stmt);
+			break;
+		case ST_RETURN:
+			print_return(stmt);
 			break;
 	}
 }

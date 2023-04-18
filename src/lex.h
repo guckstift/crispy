@@ -10,6 +10,7 @@
 	f(false) \
 	f(null) \
 	f(function) \
+	f(return) \
 
 typedef enum {
 	TK_KEYWORD,

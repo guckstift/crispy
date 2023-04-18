@@ -358,6 +358,37 @@ static Stmt *p_funcdecl()
 	return stmt;
 }
 
+static Stmt *p_return()
+{
+	Token *start = eat_keyword(KW_return);
+	
+	if(!start) {
+		return 0;
+	}
+	
+	if(!cur_scope->parent) {
+		error("return can only be used inside a function");
+	}
+	
+	Expr *value = p_expr();
+	
+	if(value == 0) {
+		error("expected value to return");
+	}
+	
+	if(!eat_punct(';')) {
+		error("expected ';' after return statement");
+	}
+	
+	Stmt *stmt = calloc(1, sizeof(Stmt));
+	stmt->type = ST_RETURN;
+	stmt->start = start;
+	stmt->end = cur;
+	stmt->scope = cur_scope;
+	stmt->value = value;
+	return stmt;
+}
+
 static Stmt *p_stmt()
 {
 	Stmt *stmt;
@@ -365,7 +396,8 @@ static Stmt *p_stmt()
 	(stmt = p_vardecl()) ||
 	(stmt = p_assign_or_call()) ||
 	(stmt = p_print()) ||
-	(stmt = p_funcdecl()) ;
+	(stmt = p_funcdecl()) ||
+	(stmt = p_return()) ;
 	
 	return stmt;
 }

@@ -37,6 +37,7 @@ typedef enum {
 	ST_PRINT,
 	ST_FUNCDECL,
 	ST_CALL,
+	ST_RETURN,
 } StmtType;
 
 typedef struct DeclItem {
@@ -62,7 +63,7 @@ typedef struct Stmt {
 	
 	union {
 		Expr *init; // vardecl
-		Expr *value; // assign, print
+		Expr *value; // assign, print, return
 		struct Block *body; // funcdecl
 	};
 	

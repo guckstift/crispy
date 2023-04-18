@@ -186,6 +186,13 @@ static void g_call(Stmt *call)
 	fprintf(file, ".func();\n");
 }
 
+static void g_return(Stmt *returnstmt)
+{
+	fprintf(file, "\t""return ");
+	g_expr(returnstmt->value, 0);
+	fprintf(file, ";\n");
+}
+
 static void g_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
@@ -204,6 +211,9 @@ static void g_stmt(Stmt *stmt)
 		case ST_CALL:
 			g_call(stmt);
 			break;
+		case ST_RETURN:
+			g_return(stmt);
+			break;
 	}
 }
 
@@ -216,7 +226,7 @@ static void g_block(Block *block)
 
 static void g_funcproto(Stmt *funcdecl)
 {
-	fprintf(file, "void ");
+	fprintf(file, "Value ");
 	g_funcname(funcdecl->ident);
 	fprintf(file, "();\n");
 }
@@ -232,7 +242,7 @@ static void g_funcprotos(Scope *scope)
 
 static void g_funcimpl(Stmt *funcdecl)
 {
-	fprintf(file, "void ");
+	fprintf(file, "Value ");
 	g_funcname(funcdecl->ident);
 	fprintf(file, "() {\n");
 	
