@@ -32,7 +32,7 @@ IDENT = [a-zA-Z_] [a-zA-Z_0-9]* ;
 IDENT != KEYWORD ;
 
 KEYWORD = [a-zA-Z_] [a-zA-Z_0-9]* & (
-	"var" | "print" | "true" | "false"
+	"var" | "print" | "true" | "false" | "null"
 ) ;
 
 INT = [0-9]+ ;
@@ -50,7 +50,7 @@ stmt = vardecl | assign | print ;
 vardecl = "var" IDENT ( "=" expr )? ";" ;
 assign = IDENT "=" expr ";" ;
 print = "print" expr ";" ;
-expr = INT | IDENT | "true" | "false" ;
+expr = INT | IDENT | "true" | "false" | "null" ;
 ```
 
 ### Module
@@ -67,7 +67,8 @@ A statement (`stmt`) is one of these:
 
 A variable declaration introduces a new variable `IDENT` and optionally assigns
 an initial value `expr` to it. The same variable `x` is not allowed to be
-redeclared. A variable is not bound to a fixed type over its lifetime.
+redeclared. A variable is not bound to a fixed type over its lifetime. If the
+initial value is omitted then the variable is `null` by default.
 
 A variable assignment stores a new value `expr` into a variable `IDENT` which
 must be declared be a previous corresponding `vardecl`.
@@ -83,10 +84,12 @@ An expression is one of these:
 * a decimal integer literal (`INT`)
 * a variable identifier (`IDENT`)
 * a boolean literal (`true` or `false`)
+* the `null` value
 
 ### Types
 
 `crispy` has these types:
 
-* `int` 64 bit signed integer
-* `bool` boolean value
+* `int` - 64 bit signed integer
+* `bool` - boolean value
+* `null` - the `null` type
