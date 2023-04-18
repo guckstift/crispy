@@ -118,26 +118,3 @@ Token *lex(char *src, char *src_end)
 	
 	return tokens;
 }
-
-void print_tokens(Token *tokens)
-{
-	for(Token *token = tokens; token->type != TK_EOF; token ++) {
-		switch(token->type) {
-			case TK_KEYWORD:
-				printf(
-					"%i: KEYWORD: %s\n", token->line, keywords[token->keyword]
-				);
-				
-				break;
-			case TK_IDENT:
-				printf("%i: IDENT: %s\n", token->line, token->text);
-				break;
-			case TK_INT:
-				printf("%i: INT: %li\n", token->line, token->value);
-				break;
-			case TK_PUNCT:
-				printf("%i: PUNCT: %c\n", token->line, token->punct);
-				break;
-		}
-	}
-}

@@ -4,6 +4,7 @@
 #include "parse.h"
 #include "analyze.h"
 #include "generate.h"
+#include "print.h"
 
 static void error(char *msg)
 {

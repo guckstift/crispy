@@ -95,7 +95,5 @@ typedef struct {
 
 Stmt *lookup(Token *ident, Scope *scope);
 Module *parse(Token *tokens);
-void print_scope(Scope *scope);
-void print_module(Module *module);
 
 #endif
