@@ -25,12 +25,14 @@ Token *lex(char *src, char *src_end)
 	line = 1;
 	
 	while(src <= src_end) {
-		Token token = {.type = TK_UNKNOWN};
+		Token token;
 		
 		if(*src == '#') {
 			while(src <= src_end && *src != '\n') {
 				src++;
 			}
+			
+			continue;
 		}
 		else if(isalpha(*src) || *src == '_') {
 			char *start = src;
@@ -100,6 +102,7 @@ Token *lex(char *src, char *src_end)
 			}
 			
 			src ++;
+			continue;
 		}
 		else if(src == src_end) {
 			token = (Token){.type = TK_EOF, .line = line};
@@ -109,11 +112,9 @@ Token *lex(char *src, char *src_end)
 			error("unknown token");
 		}
 		
-		if(token.type != TK_UNKNOWN) {
-			num_tokens ++;
-			tokens = realloc(tokens, sizeof(Token) * num_tokens);
-			tokens[num_tokens - 1] = token;
-		}
+		num_tokens ++;
+		tokens = realloc(tokens, sizeof(Token) * num_tokens);
+		tokens[num_tokens - 1] = token;
 	}
 	
 	return tokens;
