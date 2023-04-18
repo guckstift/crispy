@@ -78,6 +78,18 @@ Token *lex(char *src, char *src_end)
 			
 			token = (Token){.type = TK_INT, .value = value, .line = line};
 		}
+		else if(src[0] == '0' && src[1] == 'b') {
+			src += 2;
+			int64_t value = 0;
+			
+			while(*src == '0' || *src == '1') {
+				value *= 2;
+				value += *src - '0';
+				src ++;
+			}
+			
+			token = (Token){.type = TK_INT, .value = value, .line = line};
+		}
 		else if(isdigit(*src)) {
 			int64_t value = 0;
 			
