@@ -119,7 +119,10 @@ static void print_call(Stmt *assign)
 static void print_return(Stmt *returnstmt)
 {
 	printf("return ");
-	print_expr(returnstmt->value);
+	
+	if(returnstmt->value) {
+		print_expr(returnstmt->value);
+	}
 }
 
 static void print_stmt(Stmt *stmt)

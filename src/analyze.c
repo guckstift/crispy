@@ -122,7 +122,9 @@ static void a_call(Stmt *call)
 
 static void a_return(Stmt *returnstmt)
 {
-	a_expr(returnstmt->value);
+	if(returnstmt->value) {
+		a_expr(returnstmt->value);
+	}
 }
 
 static void a_stmt(Stmt *stmt)

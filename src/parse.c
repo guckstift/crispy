@@ -419,10 +419,6 @@ static Stmt *p_return()
 	
 	Expr *value = p_expr();
 	
-	if(value == 0) {
-		error("expected value to return");
-	}
-	
 	if(!eat_punct(';')) {
 		error("expected ';' after return statement");
 	}

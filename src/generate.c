@@ -247,7 +247,14 @@ static void g_return(Stmt *returnstmt)
 {
 	g_indent();
 	fprintf(file, "return ");
-	g_expr(returnstmt->value, 0);
+	
+	if(returnstmt->value) {
+		g_expr(returnstmt->value, 0);
+	}
+	else {
+		fprintf(file, "NULL_VALUE");
+	}
+	
 	fprintf(file, ";\n");
 }
 

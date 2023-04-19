@@ -4,7 +4,7 @@ function foo()
 	{
 	}
 	
-	return bar;
+	return;
 }
 
 var x = foo();
