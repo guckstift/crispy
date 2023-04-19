@@ -340,10 +340,6 @@ static Stmt *p_funcdecl()
 		return 0;
 	}
 	
-	if(cur_scope->parent) {
-		error("functions can only be declared at top level");
-	}
-	
 	Token *ident = eat_token(TK_IDENT);
 	int64_t func_id = next_func_id;
 	next_func_id ++;

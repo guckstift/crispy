@@ -1,9 +1,16 @@
+var a = 90;
+
 function foo()
 {
-	print true;
+	var x = 90;
+	
+	function bar()
+	{
+		print a;
+	}
+	
+	return bar;
 }
 
-function bar()
-{
-	print false;
-}
+var bee = foo();
+bee();

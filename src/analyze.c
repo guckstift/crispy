@@ -61,6 +61,13 @@ static Stmt *a_ident(Token *ident)
 		decl->early_use = 1;
 		add_used_var(decl);
 	}
+	else if(decl->scope != cur_scope && decl->scope->parent) {
+		error(
+			ident->line,
+			"can not use local variable %s in enclosed function",
+			ident->text
+		);
+	}
 	
 	return decl;
 }

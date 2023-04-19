@@ -4,6 +4,14 @@
 static void g_expr(Expr *expr, int in_decl_init);
 
 static FILE *file = 0;
+static int level = 0;
+
+static void g_indent()
+{
+	for(int i=0; i<level; i++) {
+		fprintf(file, "\t");
+	}
+}
 
 static void g_ident(Token *ident)
 {
@@ -109,7 +117,8 @@ static void g_global_vardecl(Stmt *vardecl)
 
 static void g_local_vardecl(Stmt *vardecl)
 {
-	fprintf(file, "\tValue ");
+	g_indent();
+	fprintf(file, "Value ");
 	g_ident(vardecl->ident);
 	fprintf(file, " = ");
 	
@@ -126,7 +135,7 @@ static void g_local_vardecl(Stmt *vardecl)
 static void g_vardecl_assign(Stmt *vardecl)
 {
 	if(vardecl->init && !vardecl->init->isconst) {
-		fprintf(file, "\t");
+		g_indent();
 		g_ident(vardecl->ident);
 		fprintf(file, " = ");
 		g_expr(vardecl->init, 0);
@@ -134,7 +143,7 @@ static void g_vardecl_assign(Stmt *vardecl)
 	}
 	
 	if(vardecl->early_use) {
-		fprintf(file, "\t");
+		g_indent();
 		g_initvar(vardecl->ident);
 		fprintf(file, " = 1;\n");
 	}
@@ -152,7 +161,7 @@ static void g_vardecl_stmt(Stmt *vardecl)
 
 static void g_assign(Stmt *assign)
 {
-	fprintf(file, "\t");
+	g_indent();
 	g_ident(assign->ident);
 	fprintf(file, " = ");
 	g_expr(assign->value, 0);
@@ -161,13 +170,15 @@ static void g_assign(Stmt *assign)
 
 static void g_print(Stmt *print)
 {
-	fprintf(file, "\t""print(");
+	g_indent();
+	fprintf(file, "print(");
 	g_expr(print->value, 0);
 	fprintf(file, ");\n");
 }
 
 static void g_funcdecl(Stmt *funcdecl)
 {
+	g_indent();
 	fprintf(file, "Value ");
 	g_ident(funcdecl->ident);
 	fprintf(file, " = {.type = TY_FUNCTION, .func = ");
@@ -184,15 +195,26 @@ static void g_funcdecl(Stmt *funcdecl)
 static void g_funcdecl_init(Stmt *funcdecl)
 {
 	if(funcdecl->early_use) {
-		fprintf(file, "\t");
+		g_indent();
 		g_initvar(funcdecl->ident);
 		fprintf(file, " = 1;\n");
 	}
 }
 
+static void g_funcdecl_stmt(Stmt *funcdecl)
+{
+	if(funcdecl->scope->parent) {
+		g_funcdecl(funcdecl);
+	}
+	else {
+		g_funcdecl_init(funcdecl);
+	}
+}
+
 static void g_call(Stmt *call)
 {
-	fprintf(file, "\t""if(");
+	g_indent();
+	fprintf(file, "if(");
 	g_ident(call->ident);
 	
 	fprintf(
@@ -200,14 +222,15 @@ static void g_call(Stmt *call)
 		call->ident->text
 	);
 	
-	fprintf(file, "\t");
+	g_indent();
 	g_ident(call->ident);
 	fprintf(file, ".func();\n");
 }
 
 static void g_return(Stmt *returnstmt)
 {
-	fprintf(file, "\t""return ");
+	g_indent();
+	fprintf(file, "return ");
 	g_expr(returnstmt->value, 0);
 	fprintf(file, ";\n");
 }
@@ -225,6 +248,7 @@ static void g_stmt(Stmt *stmt)
 			g_print(stmt);
 			break;
 		case ST_FUNCDECL:
+			g_funcdecl_stmt(stmt);
 			g_funcdecl_init(stmt);
 			break;
 		case ST_CALL:
@@ -238,9 +262,13 @@ static void g_stmt(Stmt *stmt)
 
 static void g_block(Block *block)
 {
+	level ++;
+	
 	for(Stmt *stmt = block->stmts; stmt; stmt = stmt->next) {
 		g_stmt(stmt);
 	}
+	
+	level --;
 }
 
 static void g_funcproto(Stmt *funcdecl)
@@ -255,6 +283,7 @@ static void g_funcprotos(Scope *scope)
 	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
 		if(decl->type == ST_FUNCDECL) {
 			g_funcproto(decl);
+			g_funcprotos(decl->body->scope);
 		}
 	}
 }
@@ -289,6 +318,7 @@ static void g_funcimpls(Scope *scope)
 	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
 		if(decl->type == ST_FUNCDECL) {
 			g_funcimpl(decl);
+			g_funcimpls(decl->body->scope);
 		}
 	}
 }
@@ -308,6 +338,7 @@ static void g_global_decls(Scope *scope)
 void generate(Module *module, FILE *outfile)
 {
 	file = outfile;
+	level = 0;
 	
 	fprintf(file, RUNTIME_RES "\n");
 	
