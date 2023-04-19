@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 #define NULL_VALUE ((Value){.type = TY_NULL})
 
@@ -21,8 +22,12 @@ typedef struct Value {
 	};
 } Value;
 
-static void error(char *msg) {
-	fprintf(stderr, "error: %s\n", msg);
+static void error(char *msg, ...) {
+	va_list args;
+	va_start(args, msg);
+	fprintf(stderr, "error: ");
+	vfprintf(stderr, msg, args);
+	fprintf(stderr, "\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -50,6 +55,15 @@ static Value check_type(Type mintype, Type maxtype, Value value)
 {
 	if(value.type < mintype || value.type > maxtype) {
 		error("wrong type");
+	}
+	
+	return value;
+}
+
+static Value callable_checked(Value value, char *name)
+{
+	if(value.type != TY_FUNCTION) {
+		error("%s is not callable", name);
 	}
 	
 	return value;

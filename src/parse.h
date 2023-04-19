@@ -17,6 +17,7 @@ typedef enum {
 typedef struct Expr {
 	ExprType type;
 	int isconst;
+	int has_side_effects;
 	struct Expr *next;
 	
 	union {
@@ -28,6 +29,7 @@ typedef struct Expr {
 	
 	union {
 		struct Expr *right;
+		int tmp_id;
 	};
 	
 	union {

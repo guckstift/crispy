@@ -10,6 +10,7 @@ static Block *p_block();
 static Token *cur = 0;
 static Scope *cur_scope = 0;
 static int next_func_id = 0;
+static int next_tmp_id = 0;
 
 static void error(char *msg, ...)
 {
@@ -163,7 +164,10 @@ static Expr *p_call_or_atom()
 	Expr *expr = calloc(1, sizeof(Expr));
 	expr->type = EX_CALL;
 	expr->isconst = 0;
+	expr->has_side_effects = 1;
 	expr->ident = ident;
+	expr->tmp_id = next_tmp_id;
+	next_tmp_id ++;
 	return expr;
 }
 
@@ -197,6 +201,10 @@ static Expr *p_binop()
 			Expr *binop = calloc(1, sizeof(Expr));
 			binop->type = EX_BINOP;
 			binop->isconst = 0;
+			
+			binop->has_side_effects =
+				left->has_side_effects || right->has_side_effects;
+			
 			binop->left = left;
 			binop->right = right;
 			binop->op = op->punct;

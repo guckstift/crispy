@@ -2,6 +2,7 @@
 #include "runtime.c.res.h"
 
 static void g_expr(Expr *expr, int in_decl_init);
+static void g_tmp_assigns(Expr *expr);
 
 static FILE *file = 0;
 static int level = 0;
@@ -26,6 +27,11 @@ static void g_funcname(Stmt *func)
 static void g_initvar(Token *ident)
 {
 	fprintf(file, "init_%s", ident->text);
+}
+
+static void g_tmpvar(Expr *expr)
+{
+	fprintf(file, "tmp%i", expr->tmp_id);
 }
 
 static void g_atom(Expr *expr, int in_decl_init)
@@ -69,18 +75,14 @@ static void g_binop(Expr *expr, int in_decl_init)
 
 static void g_callexpr(Expr *call)
 {
-	fprintf(file, "(");
+	fprintf(file, "callable_checked(");
 	g_ident(call->ident);
-	
-	fprintf(
-		file,
-		".type != TY_FUNCTION ? "
-		"(error(\"%s is not callable\"), NULL_VALUE) : ",
-		call->ident->text
-	);
-	
-	g_ident(call->ident);
-	fprintf(file, ".func())");
+	fprintf(file, ", \"%s\").func()", call->ident->text);
+}
+
+static void g_callexpr_tmp(Expr *call)
+{
+	g_tmpvar(call);
 }
 
 static void g_expr(Expr *expr, int in_decl_init)
@@ -90,7 +92,7 @@ static void g_expr(Expr *expr, int in_decl_init)
 			g_binop(expr, in_decl_init);
 			break;
 		case EX_CALL:
-			g_callexpr(expr);
+			g_callexpr_tmp(expr);
 			break;
 		default:
 			g_atom(expr, in_decl_init);
@@ -157,6 +159,8 @@ static void g_vardecl_assign(Stmt *vardecl)
 
 static void g_vardecl_stmt(Stmt *vardecl)
 {
+	g_tmp_assigns(vardecl->init);
+	
 	if(vardecl->scope->parent) {
 		g_local_vardecl(vardecl);
 	}
@@ -167,6 +171,7 @@ static void g_vardecl_stmt(Stmt *vardecl)
 
 static void g_assign(Stmt *assign)
 {
+	g_tmp_assigns(assign->value);
 	g_indent();
 	g_ident(assign->ident);
 	fprintf(file, " = ");
@@ -174,8 +179,32 @@ static void g_assign(Stmt *assign)
 	fprintf(file, ";\n");
 }
 
+static void g_tmp_assigns(Expr *expr)
+{
+	if(!expr->has_side_effects) {
+		return;
+	}
+	
+	if(expr->type == EX_BINOP) {
+		g_tmp_assigns(expr->left);
+		g_tmp_assigns(expr->right);
+	}
+	else if(expr->type == EX_CALL) {
+		g_indent();
+		fprintf(file, "Value ");
+		g_tmpvar(expr);
+		fprintf(file, " = ");
+		g_callexpr(expr);
+		fprintf(file, ";\n");
+	}
+}
+
 static void g_print(Stmt *print)
 {
+	for(Expr *value = print->values; value; value = value->next) {
+		g_tmp_assigns(value);
+	}
+	
 	for(Expr *value = print->values; value; value = value->next) {
 		if(value != print->values) {
 			g_indent();
@@ -245,6 +274,10 @@ static void g_call(Stmt *call)
 
 static void g_return(Stmt *returnstmt)
 {
+	if(returnstmt->value) {
+		g_tmp_assigns(returnstmt->value);
+	}
+	
 	g_indent();
 	fprintf(file, "return ");
 	
