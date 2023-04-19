@@ -1,9 +1,11 @@
 function foo()
 {
+	return [1,2,3];
 }
 
-var x = [1, true, null, foo];
-print x;
+foo();
 
-var y = [8, x, 0];
-print y;
+var x = null;
+var y = true;
+x = false;
+var a = "HEllo";

@@ -36,23 +36,36 @@ static void g_tmpvar(Expr *expr)
 
 static void g_atom(Expr *expr, int in_decl_init)
 {
-	if(!in_decl_init && expr->isconst) {
-		fprintf(file, "(Value)");
-	}
+	int no_decl_init_const = !in_decl_init && expr->isconst;
 	
 	switch(expr->type) {
 		case EX_NULL:
-			fprintf(file, "{.type = TY_NULL}");
+			fprintf(file, "NULL_VALUE%s", !no_decl_init_const ? "_INIT" : "");
 			break;
 		case EX_BOOL:
-			fprintf(file, "{.type = TY_BOOL, .value = %i}", !!expr->value);
+			fprintf(
+				file,
+				"BOOL_VALUE%s(%i)",
+				!no_decl_init_const ? "_INIT" : "",
+				!!expr->value
+			);
+			
 			break;
 		case EX_INT:
-			fprintf(file, "{.type = TY_INT, .value = %li}", expr->value);
+			fprintf(
+				file,
+				"INT_VALUE%s(%li)",
+				!no_decl_init_const ? "_INIT" : "",
+				expr->value
+			);
+			
 			break;
 		case EX_STRING:
 			fprintf(
-				file, "{.type = TY_STRING, .string = \"%s\"}", expr->string
+				file,
+				"STRING_VALUE%s(\"%s\")",
+				!no_decl_init_const ? "_INIT" : "",
+				expr->string
 			);
 			
 			break;
@@ -86,7 +99,7 @@ static void g_callexpr_tmp(Expr *call)
 static void g_array(Expr *array)
 {
 	fprintf(
-		file, "(Value){.type = TY_ARRAY, .array = new_array(%li", array->length
+		file, "ARRAY_VALUE(new_array(%li", array->length
 	);
 	
 	for(Expr *item = array->items; item; item = item->next) {
@@ -94,7 +107,7 @@ static void g_array(Expr *array)
 		g_expr(item, 0);
 	}
 	
-	fprintf(file, ")}");
+	fprintf(file, "))");
 }
 
 static void g_expr(Expr *expr, int in_decl_init)
@@ -146,7 +159,9 @@ static void g_local_vardecl(Stmt *vardecl)
 	fprintf(file, " = ");
 	
 	if(vardecl->init) {
+		fprintf(file, "value_incref(");
 		g_expr(vardecl->init, 1);
+		fprintf(file, ")");
 	}
 	else {
 		g_expr(&(Expr){.type = EX_NULL}, 1);
@@ -159,10 +174,11 @@ static void g_vardecl_assign(Stmt *vardecl)
 {
 	if(vardecl->init && !vardecl->init->isconst) {
 		g_indent();
+		fprintf(file, "value_assign(&");
 		g_ident(vardecl->ident);
-		fprintf(file, " = ");
+		fprintf(file, ", ");
 		g_expr(vardecl->init, 0);
-		fprintf(file, ";\n");
+		fprintf(file, ");\n");
 	}
 	
 	if(vardecl->early_use) {
@@ -188,10 +204,11 @@ static void g_assign(Stmt *assign)
 {
 	g_tmp_assigns(assign->value);
 	g_indent();
+	fprintf(file, "value_assign(&");
 	g_ident(assign->ident);
-	fprintf(file, " = ");
+	fprintf(file, ", ");
 	g_expr(assign->value, 0);
-	fprintf(file, ";\n");
+	fprintf(file, ");\n");
 }
 
 static void g_tmp_assigns(Expr *expr)
@@ -241,9 +258,9 @@ static void g_funcdecl(Stmt *funcdecl)
 	g_indent();
 	fprintf(file, "Value ");
 	g_ident(funcdecl->ident);
-	fprintf(file, " = {.type = TY_FUNCTION, .func = ");
+	fprintf(file, " = FUNCTION_VALUE_INIT(");
 	g_funcname(funcdecl);
-	fprintf(file, "};\n");
+	fprintf(file, ");\n");
 	
 	if(funcdecl->early_use) {
 		fprintf(file, "int ");
@@ -274,8 +291,9 @@ static void g_funcdecl_stmt(Stmt *funcdecl)
 static void g_call(Stmt *call)
 {
 	g_indent();
+	fprintf(file, "value_decref(");
 	g_callexpr(call->call);
-	fprintf(file, ";\n");
+	fprintf(file, ");\n");
 }
 
 static void g_return(Stmt *returnstmt)

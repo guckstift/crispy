@@ -4,6 +4,15 @@
 #include <stdarg.h>
 
 #define NULL_VALUE ((Value){.type = TY_NULL})
+#define NULL_VALUE_INIT {.type = TY_NULL}
+#define BOOL_VALUE(v) ((Value){.type = TY_BOOL, .value = v})
+#define BOOL_VALUE_INIT(v) {.type = TY_BOOL, .value = v}
+#define INT_VALUE(v) ((Value){.type = TY_INT, .value = v})
+#define INT_VALUE_INIT(v) {.type = TY_INT, .value = v}
+#define STRING_VALUE(v) ((Value){.type = TY_STRING, .string = v})
+#define STRING_VALUE_INIT(v) {.type = TY_STRING, .string = v}
+#define ARRAY_VALUE(v) ((Value){.type = TY_ARRAY, .array = v})
+#define FUNCTION_VALUE_INIT(v) {.type = TY_FUNCTION, .func = v}
 
 #define INT_BINOP(left, op, right) \
 	(Value){ \
@@ -35,11 +44,13 @@ typedef struct Value {
 } Value;
 
 typedef struct Array {
+	int64_t refs;
 	int64_t length;
 	Value items[];
 } Array;
 
 static void print(Value value);
+static void value_decref(Value value);
 
 static void error(char *msg, ...) {
 	va_list args;
@@ -119,6 +130,45 @@ static Array *new_array(int64_t length, ...) {
 	
 	va_end(args);
 	return array;
+}
+
+static Array *array_incref(Array *array) {
+	array->refs ++;
+	return array;
+}
+
+static void array_decref(Array *array) {
+	if(array->refs > 0) {
+		array->refs --;
+	}
+	
+	if(array->refs == 0) {
+		for(int64_t i=0; i < array->length; i++) {
+			value_decref(array->items[i]);
+		}
+		
+		free(array);
+	}
+}
+
+static Value value_incref(Value value) {
+	if(value.type == TY_ARRAY) {
+		array_incref(value.array);
+	}
+	
+	return value;
+}
+
+static void value_decref(Value value) {
+	if(value.type == TY_ARRAY) {
+		array_decref(value.array);
+	}
+}
+
+static void value_assign(Value *target, Value value) {
+	value_decref(*target);
+	value_incref(value);
+	*target = value;
 }
 
 static Value call(Value value, char *name) {
