@@ -4,3 +4,5 @@ function foo()
 }
 
 foo();
+
+var x = foo() + foo();

@@ -70,11 +70,11 @@ static Value check_type(Type mintype, Type maxtype, Value value)
 	return value;
 }
 
-static Value callable_checked(Value value, char *name)
+static Value call(Value value, char *name)
 {
 	if(value.type != TY_FUNCTION) {
 		error("%s is not callable", name);
 	}
 	
-	return value;
+	return value.func();
 }

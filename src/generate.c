@@ -73,9 +73,9 @@ static void g_binop(Expr *expr, int in_decl_init)
 
 static void g_callexpr(Expr *call)
 {
-	fprintf(file, "callable_checked(");
+	fprintf(file, "call(");
 	g_ident(call->ident);
-	fprintf(file, ", \"%s\").func()", call->ident->text);
+	fprintf(file, ", \"%s\")", call->ident->text);
 }
 
 static void g_callexpr_tmp(Expr *call)
