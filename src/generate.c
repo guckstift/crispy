@@ -326,6 +326,8 @@ static void g_funcimpl(Stmt *funcdecl)
 	}
 	
 	g_block(funcdecl->body);
+	g_indent();
+	fprintf(file, "\t""return NULL_VALUE;\n");
 	fprintf(file, "}\n");
 }
 
