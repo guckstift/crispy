@@ -41,6 +41,12 @@ static void print_indent()
 	}
 }
 
+static void print_callexpr(Expr *call)
+{
+	printf("%s", call->ident->text);
+	printf("()");
+}
+
 static void print_expr(Expr *expr)
 {
 	switch(expr->type) {
@@ -63,6 +69,9 @@ static void print_expr(Expr *expr)
 			print_expr(expr->left);
 			printf("%c", expr->op);
 			print_expr(expr->right);
+			break;
+		case EX_CALL:
+			print_callexpr(expr);
 			break;
 	}
 }
@@ -110,10 +119,9 @@ static void print_funcdecl(Stmt *funcdecl)
 	printf("}");
 }
 
-static void print_call(Stmt *assign)
+static void print_call(Stmt *call)
 {
-	printf("%s", assign->ident->text);
-	printf("()");
+	print_callexpr(call->call);
 }
 
 static void print_return(Stmt *returnstmt)

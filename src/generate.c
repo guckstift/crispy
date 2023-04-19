@@ -257,17 +257,8 @@ static void g_funcdecl_stmt(Stmt *funcdecl)
 static void g_call(Stmt *call)
 {
 	g_indent();
-	fprintf(file, "if(");
-	g_ident(call->ident);
-	
-	fprintf(
-		file, ".type != TY_FUNCTION) error(\"%s is not callable\");\n",
-		call->ident->text
-	);
-	
-	g_indent();
-	g_ident(call->ident);
-	fprintf(file, ".func();\n");
+	g_callexpr(call->call);
+	fprintf(file, ";\n");
 }
 
 static void g_return(Stmt *returnstmt)

@@ -117,7 +117,7 @@ static void a_funcdecl(Stmt *funcdecl)
 
 static void a_call(Stmt *call)
 {
-	a_ident(call->ident);
+	a_expr(call->call);
 }
 
 static void a_return(Stmt *returnstmt)

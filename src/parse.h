@@ -64,13 +64,14 @@ typedef struct Stmt {
 	struct Stmt *next;
 	
 	union {
-		Token *ident; // vardecl, assign, funcdecl, call
+		Token *ident; // vardecl, assign, funcdecl
 	};
 	
 	union {
 		Expr *init; // vardecl
 		Expr *value; // assign, return
 		Expr *values; // print
+		Expr *call; // call
 		struct Block *body; // funcdecl
 	};
 	

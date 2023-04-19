@@ -274,12 +274,19 @@ static Stmt *p_call_x(Token *ident)
 		error("expected ';' after function call");
 	}
 	
+	Expr *call = calloc(1, sizeof(Expr));
+	call->type = EX_CALL;
+	call->isconst = 0;
+	call->has_side_effects = 1;
+	call->ident = ident;
+	call->tmp_id = next_tmp_id;
+	next_tmp_id ++;
 	Stmt *stmt = calloc(1, sizeof(Stmt));
 	stmt->start = ident;
 	stmt->end = cur;
 	stmt->scope = cur_scope;
 	stmt->type = ST_CALL;
-	stmt->ident = ident;
+	stmt->call = call;
 	return stmt;
 }
 
