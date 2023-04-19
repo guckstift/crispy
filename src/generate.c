@@ -31,7 +31,7 @@ static void g_initvar(Token *ident)
 
 static void g_tmpvar(Expr *expr)
 {
-	fprintf(file, "tmp%i", expr->tmp_id);
+	fprintf(file, "tmp%li", expr->tmp_id);
 }
 
 static void g_atom(Expr *expr, int in_decl_init)

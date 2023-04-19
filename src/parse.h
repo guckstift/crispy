@@ -29,7 +29,7 @@ typedef struct Expr {
 	
 	union {
 		struct Expr *right;
-		int tmp_id;
+		int64_t tmp_id;
 	};
 	
 	union {
