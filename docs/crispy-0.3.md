@@ -148,7 +148,8 @@ A binary operation combines two or more values with operators. Operators are
 `+` which adds values or `-` which subtracts the right value from the left one.
 The result is an integer. The single operands can be integers, booleans or even
 `null`. `null` is interpreted as `0`, `true` as `1` and `false` as `0`. The
-binary expression is evaluated from left to right.
+binary expression is evaluated from left to right and the operator is
+left-associative.
 
 A call expression is just like a call statement but evaluated to its return
 value.
