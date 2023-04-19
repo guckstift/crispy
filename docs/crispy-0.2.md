@@ -2,6 +2,14 @@
 
 This document specifies the *crispy* programming language 0.2 and its compiler.
 
+## New features
+
+* first-class functions that can only be declared top level
+* a call statement for functions
+* hexadecimal and binary literals
+* binary operators `+` and `-`
+* single line comments with `#`
+
 ## Compiler
 
 The `crispy` compiler program translates *crispy* module files to C source
