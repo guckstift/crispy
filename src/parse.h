@@ -16,6 +16,7 @@ typedef enum {
 typedef struct Expr {
 	ExprType type;
 	int isconst;
+	struct Expr *next;
 	
 	union {
 		int64_t value;
@@ -64,7 +65,8 @@ typedef struct Stmt {
 	
 	union {
 		Expr *init; // vardecl
-		Expr *value; // assign, print, return
+		Expr *value; // assign, return
+		Expr *values; // print
 		struct Block *body; // funcdecl
 	};
 	

@@ -101,7 +101,9 @@ static void a_assign(Stmt *assign)
 
 static void a_print(Stmt *print)
 {
-	a_expr(print->value);
+	for(Expr *value = print->values; value; value = value->next) {
+		a_expr(value);
+	}
 }
 
 static void a_funcdecl(Stmt *funcdecl)

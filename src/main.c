@@ -37,6 +37,7 @@ int main(int argc, char **argv)
 	print_tokens(tokens);
 	
 	Module *module = parse(tokens);
+	print_module(module);
 	analyze(module);
 	print_module(module);
 	

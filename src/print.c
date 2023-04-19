@@ -82,7 +82,14 @@ static void print_assign(Stmt *assign)
 static void print_print(Stmt *print)
 {
 	printf("print ");
-	print_expr(print->value);
+	
+	for(Expr *value = print->values; value; value = value->next) {
+		if(value != print->values) {
+			printf(", ");
+		}
+		
+		print_expr(value);
+	}
 }
 
 static void print_funcdecl(Stmt *funcdecl)

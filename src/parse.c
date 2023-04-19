@@ -313,10 +313,23 @@ static Stmt *p_print()
 		return 0;
 	}
 	
-	Expr *value = p_expr();
+	Expr *first = p_expr();
 	
-	if(value == 0) {
+	if(first == 0) {
 		error("expected value to print");
+	}
+	
+	Expr *last = first;
+	
+	while(eat_punct(',')) {
+		Expr *next = p_expr();
+		
+		if(next == 0) {
+			error("expected another value after ',' to print");
+		}
+		
+		last->next = next;
+		last = next;
 	}
 	
 	if(!eat_punct(';')) {
@@ -328,7 +341,7 @@ static Stmt *p_print()
 	stmt->start = start;
 	stmt->end = cur;
 	stmt->scope = cur_scope;
-	stmt->value = value;
+	stmt->values = first;
 	return stmt;
 }
 

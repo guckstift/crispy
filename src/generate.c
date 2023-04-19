@@ -170,10 +170,20 @@ static void g_assign(Stmt *assign)
 
 static void g_print(Stmt *print)
 {
+	for(Expr *value = print->values; value; value = value->next) {
+		if(value != print->values) {
+			g_indent();
+			fprintf(file, "printf(\" \");\n");
+		}
+		
+		g_indent();
+		fprintf(file, "print(");
+		g_expr(value, 0);
+		fprintf(file, ");\n");
+	}
+	
 	g_indent();
-	fprintf(file, "print(");
-	g_expr(print->value, 0);
-	fprintf(file, ");\n");
+	fprintf(file, "printf(\"\\n\");\n");
 }
 
 static void g_funcdecl(Stmt *funcdecl)

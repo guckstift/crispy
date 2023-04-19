@@ -27,16 +27,16 @@ static void error(char *msg) {
 static void print(Value value) {
 	switch(value.type) {
 		case TY_NULL:
-			printf("null\n");
+			printf("null");
 			break;
 		case TY_BOOL:
-			printf("%s\n", value.value ? "true" : "false");
+			printf("%s", value.value ? "true" : "false");
 			break;
 		case TY_INT:
-			printf("%li\n", value.value);
+			printf("%li", value.value);
 			break;
 		case TY_FUNCTION:
-			printf("<function %p>\n", *(void**)&value.func);
+			printf("<function %p>", *(void**)&value.func);
 			break;
 	}
 }
