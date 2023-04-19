@@ -5,6 +5,7 @@
 #include "analyze.h"
 
 static void a_block(Block *block);
+static void a_expr(Expr *expr);
 
 static Scope *cur_scope = 0;
 static Stmt *cur_funcdecl = 0;
@@ -72,17 +73,29 @@ static Stmt *a_ident(Token *ident)
 	return decl;
 }
 
+static void a_array(Expr *array)
+{
+	for(Expr *item = array->items; item; item = item->next) {
+		a_expr(item);
+	}
+}
+
 static void a_expr(Expr *expr)
 {
-	if(expr->type == EX_VAR) {
-		a_ident(expr->ident);
-	}
-	else if(expr->type == EX_BINOP) {
-		a_expr(expr->left);
-		a_expr(expr->right);
-	}
-	else if(expr->type == EX_CALL) {
-		a_ident(expr->ident);
+	switch(expr->type) {
+		case EX_VAR:
+			a_ident(expr->ident);
+			break;
+		case EX_BINOP:
+			a_expr(expr->left);
+			a_expr(expr->right);
+			break;
+		case EX_CALL:
+			a_ident(expr->ident);
+			break;
+		case EX_ARRAY:
+			a_array(expr);
+			break;
 	}
 }
 

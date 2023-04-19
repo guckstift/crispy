@@ -2,6 +2,7 @@
 #include "print.h"
 
 static void print_block(Block *block);
+static void print_expr(Expr *expr);
 
 static int level = 0;
 
@@ -47,6 +48,21 @@ static void print_callexpr(Expr *call)
 	printf("()");
 }
 
+static void print_array(Expr *array)
+{
+	printf("[");
+	
+	for(Expr *item = array->items; item; item = item->next) {
+		if(item != array->items) {
+			printf(", ");
+		}
+		
+		print_expr(item);
+	}
+	
+	printf("]");
+}
+
 static void print_expr(Expr *expr)
 {
 	switch(expr->type) {
@@ -72,6 +88,9 @@ static void print_expr(Expr *expr)
 			break;
 		case EX_CALL:
 			print_callexpr(expr);
+			break;
+		case EX_ARRAY:
+			print_array(expr);
 			break;
 	}
 }

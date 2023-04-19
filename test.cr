@@ -1,8 +1,9 @@
 function foo()
 {
-	print "foo";
 }
 
-foo();
+var x = [1, true, null, foo];
+print x;
 
-var x = foo() + foo();
+var y = [8, x, 0];
+print y;

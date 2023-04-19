@@ -12,6 +12,7 @@ typedef enum {
 	EX_VAR,
 	EX_BINOP,
 	EX_CALL,
+	EX_ARRAY,
 } ExprType;
 
 typedef struct Expr {
@@ -21,19 +22,21 @@ typedef struct Expr {
 	struct Expr *next;
 	
 	union {
-		int64_t value;
-		char *string;
-		Token *ident;
-		struct Expr *left;
+		int64_t value; // int, bool
+		char *string; // string
+		Token *ident; // var, call
+		struct Expr *left; // binop
+		struct Expr *items; // array
 	};
 	
 	union {
-		struct Expr *right;
-		int64_t tmp_id;
+		struct Expr *right; // binop
+		int64_t tmp_id; // call
+		int64_t length; // array
 	};
 	
 	union {
-		char op;
+		char op; // binop
 	};
 } Expr;
 

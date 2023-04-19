@@ -83,6 +83,20 @@ static void g_callexpr_tmp(Expr *call)
 	g_tmpvar(call);
 }
 
+static void g_array(Expr *array)
+{
+	fprintf(
+		file, "(Value){.type = TY_ARRAY, .array = new_array(%li", array->length
+	);
+	
+	for(Expr *item = array->items; item; item = item->next) {
+		fprintf(file, ", ");
+		g_expr(item, 0);
+	}
+	
+	fprintf(file, ")}");
+}
+
 static void g_expr(Expr *expr, int in_decl_init)
 {
 	switch(expr->type) {
@@ -91,6 +105,9 @@ static void g_expr(Expr *expr, int in_decl_init)
 			break;
 		case EX_CALL:
 			g_callexpr_tmp(expr);
+			break;
+		case EX_ARRAY:
+			g_array(expr);
 			break;
 		default:
 			g_atom(expr, in_decl_init);

@@ -6,6 +6,7 @@
 
 static Stmt *p_stmts();
 static Block *p_block();
+static Expr *p_expr();
 
 static Token *cur = 0;
 static Scope *cur_scope = 0;
@@ -94,8 +95,55 @@ static Token *eat_punct(char punct)
 	return 0;
 }
 
+static Expr *p_array()
+{
+	Token *start = eat_punct('[');
+	
+	if(!start) {
+		return 0;
+	}
+	
+	Expr *first = p_expr();
+	Expr *last = first;
+	int64_t length = 0;
+	
+	if(first) {
+		length = 1;
+		
+		while(eat_punct(',')) {
+			Expr *item = p_expr();
+			
+			if(!item) {
+				error("expected another array item after ','");
+			}
+			
+			last->next = item;
+			last = item;
+			length ++;
+		}
+	}
+	
+	if(!eat_punct(']')) {
+		error("expected ']' at the end of array literal");
+	}
+	
+	Expr *expr = calloc(1, sizeof(Expr));
+	expr->type = EX_ARRAY;
+	expr->isconst = 0;
+	expr->has_side_effects = 1; // TODO
+	expr->items = first;
+	expr->length = length;
+	return expr;
+}
+
 static Expr *p_atom()
 {
+	Expr *array = p_array();
+	
+	if(array) {
+		return array;
+	}
+	
 	Token *token;
 	
 	(token = eat_token(TK_IDENT)) ||
