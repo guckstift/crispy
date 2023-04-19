@@ -101,6 +101,30 @@ Token *lex(char *src, char *src_end)
 			
 			token = (Token){.type = TK_INT, .value = value, .line = line};
 		}
+		else if(*src == '"') {
+			src ++;
+			char *start = src;
+			
+			while(*src != '"') {
+				if(src == src_end) {
+					error("string not terminated with \"");
+				}
+				else if(*src >= 0 && *src <= 0x1f) {
+					error("no control characters allowed in string");
+				}
+				else if(*src == '\\') {
+					error("no escape sequences supported");
+				}
+				
+				src++;
+			}
+			
+			int length = src - start;
+			char *text = calloc(length + 1, 1);
+			memcpy(text, start, length);
+			token = (Token){.type = TK_STRING, .text = text, .line = line};
+			src ++;
+		}
 		else if(
 			*src == ';' || *src == '=' || *src == '(' || *src == ')' ||
 			*src == '{' || *src == '}' || *src == '+' || *src == '-' ||

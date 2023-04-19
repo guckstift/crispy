@@ -16,6 +16,7 @@ typedef enum {
 	TK_KEYWORD,
 	TK_IDENT,
 	TK_INT,
+	TK_STRING,
 	TK_PUNCT,
 	TK_EOF,
 } TokenType;

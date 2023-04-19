@@ -17,6 +17,9 @@ void print_token(Token *token)
 		case TK_INT:
 			printf("%i: INT: %li", token->line, token->value);
 			break;
+		case TK_STRING:
+			printf("%i: STRING: \"%s\"", token->line, token->text);
+			break;
 		case TK_PUNCT:
 			printf("%i: PUNCT: %c", token->line, token->punct);
 			break;
@@ -49,6 +52,9 @@ static void print_expr(Expr *expr)
 			break;
 		case EX_INT:
 			printf("%li", expr->value);
+			break;
+		case EX_STRING:
+			printf("\"%s\"", expr->string);
 			break;
 		case EX_VAR:
 			printf("%s", expr->ident->text);

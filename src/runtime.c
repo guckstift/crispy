@@ -8,6 +8,7 @@ typedef enum {
 	TY_NULL,
 	TY_BOOL,
 	TY_INT,
+	TY_STRING,
 	TY_FUNCTION,
 } Type;
 
@@ -15,6 +16,7 @@ typedef struct Value {
 	Type type;
 	union {
 		int64_t value;
+		char *string;
 		struct Value (*func)();
 	};
 } Value;
@@ -34,6 +36,9 @@ static void print(Value value) {
 			break;
 		case TY_INT:
 			printf("%li", value.value);
+			break;
+		case TY_STRING:
+			printf("%s", value.string);
 			break;
 		case TY_FUNCTION:
 			printf("<function %p>", *(void**)&value.func);

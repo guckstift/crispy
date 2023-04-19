@@ -1,1 +1,2 @@
-print false, 42;
+var x = "Hello";
+print x, 7;

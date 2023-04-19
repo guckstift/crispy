@@ -8,6 +8,7 @@ typedef enum {
 	EX_NULL,
 	EX_BOOL,
 	EX_INT,
+	EX_STRING,
 	EX_VAR,
 	EX_BINOP,
 	EX_CALL,
@@ -20,6 +21,7 @@ typedef struct Expr {
 	
 	union {
 		int64_t value;
+		char *string;
 		Token *ident;
 		struct Expr *left;
 	};

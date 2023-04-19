@@ -44,6 +44,12 @@ static void g_atom(Expr *expr, int in_decl_init)
 		case EX_INT:
 			fprintf(file, "{.type = TY_INT, .value = %li}", expr->value);
 			break;
+		case EX_STRING:
+			fprintf(
+				file, "{.type = TY_STRING, .string = \"%s\"}", expr->string
+			);
+			
+			break;
 		case EX_VAR:
 			g_ident(expr->ident);
 			break;

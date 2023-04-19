@@ -99,6 +99,7 @@ static Expr *p_atom()
 	
 	(token = eat_token(TK_IDENT)) ||
 	(token = eat_token(TK_INT)) ||
+	(token = eat_token(TK_STRING)) ||
 	(token = eat_keyword(KW_true)) ||
 	(token = eat_keyword(KW_false)) ||
 	(token = eat_keyword(KW_null)) ;
@@ -114,6 +115,11 @@ static Expr *p_atom()
 			expr->type = EX_INT;
 			expr->isconst = 1;
 			expr->value = token->value;
+			break;
+		case TK_STRING:
+			expr->type = EX_STRING;
+			expr->isconst = 1;
+			expr->string = token->text;
 			break;
 		case TK_IDENT:
 			expr->type = EX_VAR;
@@ -172,6 +178,10 @@ static Expr *p_binop()
 		
 		if(!right) {
 			error("expected right side of %c", op->punct);
+		}
+		
+		if(left->type == EX_STRING || right->type == EX_STRING) {
+			error("strings can not be used with %c", op->punct);
 		}
 		
 		if(left->isconst && right->isconst) {
