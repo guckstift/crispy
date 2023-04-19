@@ -64,13 +64,11 @@ static void g_atom(Expr *expr, int in_decl_init)
 
 static void g_binop(Expr *expr, int in_decl_init)
 {
-	fprintf(file, "(Value){.type = TY_INT, .value = (");
-	fprintf(file, "check_type(TY_NULL, TY_INT, ");
+	fprintf(file, "INT_BINOP(");
 	g_expr(expr->left, in_decl_init);
-	fprintf(file, ")).value %c (", expr->op);
-	fprintf(file, "check_type(TY_NULL, TY_INT, ");
+	fprintf(file, ", %c, ", expr->op);
 	g_expr(expr->right, in_decl_init);
-	fprintf(file, ")).value}");
+	fprintf(file, ")");
 }
 
 static void g_callexpr(Expr *call)

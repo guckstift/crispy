@@ -5,6 +5,16 @@
 
 #define NULL_VALUE ((Value){.type = TY_NULL})
 
+#define INT_BINOP(left, op, right) \
+	(Value){ \
+		.type = TY_INT, \
+		.value = check_type( \
+			TY_NULL, TY_INT, (left) \
+		).value op check_type( \
+			TY_NULL, TY_INT, (right) \
+		).value \
+	} \
+
 typedef enum {
 	TY_NULL,
 	TY_BOOL,
