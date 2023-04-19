@@ -77,7 +77,13 @@ typedef struct Stmt {
 		struct Stmt *next_decl; // vardecl, funcdecl
 	};
 	
-	int early_use; // vardecl, funcdecl
+	union {
+		int early_use; // vardecl, funcdecl
+	};
+	
+	union {
+		int64_t func_id;
+	};
 } Stmt;
 
 typedef struct Scope {

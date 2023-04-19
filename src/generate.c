@@ -10,9 +10,9 @@ static void g_ident(Token *ident)
 	fprintf(file, "var_%s", ident->text);
 }
 
-static void g_funcname(Token *ident)
+static void g_funcname(Stmt *func)
 {
-	fprintf(file, "func_%s", ident->text);
+	fprintf(file, "func%li_%s", func->func_id, func->ident->text);
 }
 
 static void g_initvar(Token *ident)
@@ -171,7 +171,7 @@ static void g_funcdecl(Stmt *funcdecl)
 	fprintf(file, "Value ");
 	g_ident(funcdecl->ident);
 	fprintf(file, " = {.type = TY_FUNCTION, .func = ");
-	g_funcname(funcdecl->ident);
+	g_funcname(funcdecl);
 	fprintf(file, "};\n");
 	
 	if(funcdecl->early_use) {
@@ -246,7 +246,7 @@ static void g_block(Block *block)
 static void g_funcproto(Stmt *funcdecl)
 {
 	fprintf(file, "Value ");
-	g_funcname(funcdecl->ident);
+	g_funcname(funcdecl);
 	fprintf(file, "();\n");
 }
 
@@ -262,7 +262,7 @@ static void g_funcprotos(Scope *scope)
 static void g_funcimpl(Stmt *funcdecl)
 {
 	fprintf(file, "Value ");
-	g_funcname(funcdecl->ident);
+	g_funcname(funcdecl);
 	fprintf(file, "() {\n");
 	
 	for(

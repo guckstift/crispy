@@ -9,6 +9,7 @@ static Block *p_block();
 
 static Token *cur = 0;
 static Scope *cur_scope = 0;
+static int next_func_id = 0;
 
 static void error(char *msg, ...)
 {
@@ -344,6 +345,8 @@ static Stmt *p_funcdecl()
 	}
 	
 	Token *ident = eat_token(TK_IDENT);
+	int64_t func_id = next_func_id;
+	next_func_id ++;
 	
 	if(ident == 0) {
 		error("expected identifier");
@@ -374,6 +377,7 @@ static Stmt *p_funcdecl()
 	stmt->scope = cur_scope;
 	stmt->ident = ident;
 	stmt->body = body;
+	stmt->func_id = func_id;
 	
 	if(!declare(stmt)) {
 		error("name %s already declared", ident->text);
@@ -470,6 +474,7 @@ Module *parse(Token *tokens)
 {
 	cur = tokens;
 	cur_scope = 0;
+	next_func_id = 0;
 	Block *block = p_block();
 	
 	if(!eat_token(TK_EOF)) {
