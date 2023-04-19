@@ -1,11 +1,14 @@
 function foo()
 {
-	return [1,2,3];
+	var x = [1,2,3];
+	var y = [true];
+	return x;
 }
 
 foo();
+print foo();
 
-var x = null;
-var y = true;
-x = false;
-var a = "HEllo";
+function bar()
+{
+	return;
+}

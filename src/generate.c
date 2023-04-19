@@ -303,16 +303,28 @@ static void g_return(Stmt *returnstmt)
 	}
 	
 	g_indent();
-	fprintf(file, "return ");
 	
 	if(returnstmt->value) {
+		fprintf(file, "result = value_incref(");
 		g_expr(returnstmt->value, 0);
+		fprintf(file, ");\n");
 	}
 	else {
-		fprintf(file, "NULL_VALUE");
+		fprintf(file, "result = NULL_VALUE;\n");
 	}
 	
-	fprintf(file, ";\n");
+	for(
+		Stmt *local = returnstmt->scope->first_decl;
+		local; local = local->next_decl
+	) {
+		g_indent();
+		fprintf(file, "value_decref(");
+		g_ident(local->ident);
+		fprintf(file, ");\n");
+	}
+	
+	g_indent();
+	fprintf(file, "return result;\n");
 }
 
 static void g_stmt(Stmt *stmt)
@@ -378,6 +390,7 @@ static void g_funcimpl(Stmt *funcdecl)
 		DeclItem *item = funcdecl->used_vars->first_item; item;
 		item = item->next
 	) {
+		g_indent();
 		fprintf(file, "\t""if(!");
 		g_initvar(item->decl->ident);
 		
@@ -389,6 +402,8 @@ static void g_funcimpl(Stmt *funcdecl)
 		);
 	}
 	
+	g_indent();
+	fprintf(file, "\t""Value result;\n");
 	g_block(funcdecl->body);
 	g_indent();
 	fprintf(file, "\t""return NULL_VALUE;\n");
