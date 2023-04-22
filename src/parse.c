@@ -270,14 +270,36 @@ static Expr *p_postfix()
 	return expr;
 }
 
-static Expr *p_binop()
+static Token *p_operator(int level)
 {
-	Expr *left = p_postfix();
+	Token *op = 0;
+	
+	switch(level) {
+		case OP_ADD:
+			(op = eat_punct('+')) ||
+			(op = eat_punct('-')) ;
+			break;
+		case OP_MUL:
+			(op = eat_punct('*')) ||
+			(op = eat_punct('%')) ;
+			break;
+	}
+	
+	return op;
+}
+
+static Expr *p_binop(int level)
+{
+	if(level == _OPLEVEL_COUNT) {
+		return p_postfix();
+	}
+	
+	Expr *left = p_binop(level + 1);
 	
 	Token *op;
 	
-	while((op = eat_punct('+')) || (op = eat_punct('-'))) {
-		Expr *right = p_postfix();
+	while(op = p_operator(level)) {
+		Expr *right = p_binop(level + 1);
 		
 		if(!right) {
 			error("expected right side of %c", op->punct);
@@ -292,9 +314,12 @@ static Expr *p_binop()
 			sum->type = EX_INT;
 			sum->isconst = 1;
 			sum->start = left->start;
-			sum->value = op->punct == '+'
-				? left->value + right->value
-				: left->value - right->value;
+			sum->value =
+				op->punct == '+' ? left->value + right->value :
+				op->punct == '-' ? left->value - right->value :
+				op->punct == '*' ? left->value * right->value :
+				op->punct == '%' ? left->value % right->value :
+				0 /* should never happen */;
 			left = sum;
 		}
 		else {
@@ -319,7 +344,7 @@ static Expr *p_binop()
 
 static Expr *p_expr()
 {
-	return p_binop();
+	return p_binop(0);
 }
 
 static Stmt *p_vardecl()

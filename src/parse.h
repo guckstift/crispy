@@ -16,6 +16,12 @@ typedef enum {
 	EX_SUBSCRIPT,
 } ExprType;
 
+typedef enum {
+	OP_ADD,
+	OP_MUL,
+	_OPLEVEL_COUNT,
+} OpLevel;
+
 typedef struct Expr {
 	ExprType type;
 	int isconst;
