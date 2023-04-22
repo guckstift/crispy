@@ -202,7 +202,9 @@ static void g_vardecl_assign(Stmt *vardecl)
 
 static void g_vardecl_stmt(Stmt *vardecl)
 {
-	g_tmp_assigns(vardecl->init);
+	if(vardecl->init) {
+		g_tmp_assigns(vardecl->init);
+	}
 	
 	if(vardecl->scope->parent) {
 		g_local_vardecl(vardecl);
@@ -319,35 +321,38 @@ static void g_call(Stmt *call)
 	fprintf(file, ");\n");
 }
 
+static void g_cleanup_scope(Scope *scope)
+{
+	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
+		g_indent();
+		fprintf(file, "value_decref(");
+		g_ident(decl->ident);
+		fprintf(file, ");\n");
+	}
+}
+
 static void g_return(Stmt *returnstmt)
 {
 	if(returnstmt->value) {
 		g_tmp_assigns(returnstmt->value);
 	}
 	
-	g_indent();
-	
 	if(returnstmt->value) {
+		g_indent();
 		fprintf(file, "result = value_incref(");
 		g_expr(returnstmt->value, 0);
 		fprintf(file, ");\n");
 	}
-	else {
-		fprintf(file, "result = NULL_VALUE;\n");
-	}
 	
-	for(
-		Stmt *local = returnstmt->scope->first_decl;
-		local; local = local->next_decl
-	) {
-		g_indent();
-		fprintf(file, "value_decref(");
-		g_ident(local->ident);
-		fprintf(file, ");\n");
-	}
-	
+	g_cleanup_scope(returnstmt->scope);
 	g_indent();
-	fprintf(file, "return result;\n");
+	
+	if(returnstmt->value) {
+		fprintf(file, "return result;\n");
+	}
+	else {
+		fprintf(file, "return NULL_VALUE;\n");
+	}
 }
 
 static void g_stmt(Stmt *stmt)
@@ -383,6 +388,7 @@ static void g_block(Block *block)
 		g_stmt(stmt);
 	}
 	
+	g_cleanup_scope(block->scope);
 	level --;
 }
 

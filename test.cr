@@ -1,6 +1,10 @@
+var y;
+
 function foo()
 {
-	return 6;
+	var x = [0];
+	y = x;
+	x[0] = x;
 }
 
-"asa"();
+foo();

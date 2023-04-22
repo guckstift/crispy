@@ -43,8 +43,21 @@ typedef struct Value {
 	};
 } Value;
 
+typedef enum {
+	REF_INITIAL,
+	REF_VISITED,
+	REF_ALIVE,
+	REF_DEAD,
+	REF_COLLECT,
+} RefState;
+
+typedef struct {
+	int64_t count;
+	RefState state;
+} Ref;
+
 typedef struct Array {
-	int64_t refs;
+	Ref ref;
 	int64_t length;
 	Value items[];
 } Array;
@@ -139,6 +152,86 @@ static Value check_type(Type mintype, Type maxtype, Value value) {
 	return value;
 }
 
+static void array_gc_visit(Array *array)
+{
+	if(array->ref.state != REF_VISITED) {
+		array->ref.state = REF_VISITED;
+		
+		for(int64_t i=0; i < array->length; i++) {
+			Value item = array->items[i];
+			
+			if(item.type == TY_ARRAY) {
+				Array *array_item = item.array;
+				array_item->ref.count --;
+				array_gc_visit(array_item);
+			}
+		}
+	}
+}
+
+static void array_gc_scan_alive(Array *array)
+{
+	if(array->ref.state != REF_ALIVE) {
+		array->ref.state = REF_ALIVE;
+		
+		for(int64_t i=0; i < array->length; i++) {
+			Value item = array->items[i];
+			
+			if(item.type == TY_ARRAY) {
+				Array *array_item = item.array;
+				array_item->ref.count ++;
+				array_gc_scan_alive(array_item);
+			}
+		}
+	}
+}
+
+static void array_gc_scan(Array *array)
+{
+	if(array->ref.state == REF_VISITED) {
+		if(array->ref.count > 0) {
+			array_gc_scan_alive(array);
+		}
+		else {
+			array->ref.state = REF_DEAD;
+			
+			for(int64_t i=0; i < array->length; i++) {
+				Value item = array->items[i];
+				
+				if(item.type == TY_ARRAY) {
+					Array *array_item = item.array;
+					array_gc_scan(array_item);
+				}
+			}
+		}
+	}
+}
+
+static void array_gc_collect(Array *array)
+{
+	if(array->ref.state == REF_DEAD) {
+		array->ref.state = REF_COLLECT;
+		
+		for(int64_t i=0; i < array->length; i++) {
+			Value item = array->items[i];
+			
+			if(item.type == TY_ARRAY) {
+				Array *array_item = item.array;
+				array_gc_collect(array_item);
+			}
+		}
+		
+		free(array);
+	}
+}
+
+static void array_gc(Array *array)
+{
+	array_gc_visit(array);
+	array_gc_scan(array);
+	array_gc_collect(array);
+}
+
 static Array *new_array(int64_t length, ...) {
 	Array *array = calloc(1, sizeof(Array) + length * sizeof(Value));
 	array->length = length;
@@ -155,21 +248,24 @@ static Array *new_array(int64_t length, ...) {
 }
 
 static Array *array_incref(Array *array) {
-	array->refs ++;
+	array->ref.count ++;
 	return array;
 }
 
 static void array_decref(Array *array) {
-	if(array->refs > 0) {
-		array->refs --;
+	if(array->ref.count > 0) {
+		array->ref.count --;
 	}
 	
-	if(array->refs == 0) {
+	if(array->ref.count == 0) {
 		for(int64_t i=0; i < array->length; i++) {
 			value_decref(array->items[i]);
 		}
 		
 		free(array);
+	}
+	else {
+		array_gc(array);
 	}
 }
 
