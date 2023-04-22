@@ -2,26 +2,21 @@
 
 import sys
 
-def stringify_line(line):
-	line = repr(line)[1:-1]
-	line = line.replace('"', '\\"')
-	line = line.replace('%', '%%')
-	return f'"{line}\\n"'
-
 infilename = sys.argv[1]
 name = infilename.split("/")[-1].split(".")[0].upper()
 outfilename = sys.argv[2]
 
-infile = open(infilename, "r").read()
+infile = open(infilename, "rb").read()
 outfile = open(outfilename, "w")
 
-lines = infile.strip().split("\n")
+outfile.write("static const char " + name + "_RES[] = {\n")
 
-outfile.write(f"#define {name}_RES \\\n")
+i = 0
+for c in infile:
+	c = chr(c)
+	outfile.write(repr(c) + ',')
+	i += 1
+	if i % 16 == 0:
+		outfile.write("\n")
 
-output = " \\\n".join(
-	'\t' + stringify_line(line) for line in lines
-)
-
-outfile.write(output + "\n")
-
+outfile.write("0};\n")

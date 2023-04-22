@@ -1,14 +1,6 @@
 function foo()
 {
-	var x = [1,2,3];
-	var y = [true];
-	return x;
+	return 6;
 }
 
-foo();
-print foo();
-
-function bar()
-{
-	return;
-}
+"asa"();

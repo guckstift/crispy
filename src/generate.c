@@ -87,8 +87,8 @@ static void g_binop(Expr *expr, int in_decl_init)
 static void g_callexpr(Expr *call)
 {
 	fprintf(file, "call(");
-	g_ident(call->ident);
-	fprintf(file, ", \"%s\")", call->ident->text);
+	g_expr(call->callee, 0);
+	fprintf(file, ")");
 }
 
 static void g_callexpr_tmp(Expr *call)
@@ -110,6 +110,15 @@ static void g_array(Expr *array)
 	fprintf(file, "))");
 }
 
+static void g_subscript(Expr *subscript)
+{
+	fprintf(file, "*subscript(");
+	g_expr(subscript->array, 0);
+	fprintf(file, ", ");
+	g_expr(subscript->index, 0);
+	fprintf(file, ")");
+}
+
 static void g_expr(Expr *expr, int in_decl_init)
 {
 	switch(expr->type) {
@@ -121,6 +130,9 @@ static void g_expr(Expr *expr, int in_decl_init)
 			break;
 		case EX_ARRAY:
 			g_array(expr);
+			break;
+		case EX_SUBSCRIPT:
+			g_subscript(expr);
 			break;
 		default:
 			g_atom(expr, in_decl_init);
@@ -205,7 +217,7 @@ static void g_assign(Stmt *assign)
 	g_tmp_assigns(assign->value);
 	g_indent();
 	fprintf(file, "value_assign(&");
-	g_ident(assign->ident);
+	g_expr(assign->target, 0);
 	fprintf(file, ", ");
 	g_expr(assign->value, 0);
 	fprintf(file, ");\n");
@@ -222,12 +234,22 @@ static void g_tmp_assigns(Expr *expr)
 		g_tmp_assigns(expr->right);
 	}
 	else if(expr->type == EX_CALL) {
+		g_tmp_assigns(expr->callee);
 		g_indent();
 		fprintf(file, "Value ");
 		g_tmpvar(expr);
 		fprintf(file, " = ");
 		g_callexpr(expr);
 		fprintf(file, ";\n");
+	}
+	else if(expr->type == EX_ARRAY) {
+		for(Expr *item = expr->items; item; item = item->next) {
+			g_tmp_assigns(item);
+		}
+	}
+	else if(expr->type == EX_SUBSCRIPT) {
+		g_tmp_assigns(expr->array);
+		g_tmp_assigns(expr->index);
 	}
 }
 
@@ -290,6 +312,7 @@ static void g_funcdecl_stmt(Stmt *funcdecl)
 
 static void g_call(Stmt *call)
 {
+	g_tmp_assigns(call->call->callee);
 	g_indent();
 	fprintf(file, "value_decref(");
 	g_callexpr(call->call);
@@ -437,7 +460,7 @@ void generate(Module *module, FILE *outfile)
 	file = outfile;
 	level = 0;
 	
-	fprintf(file, RUNTIME_RES "\n");
+	fprintf(file, "%s\n", RUNTIME_RES);
 	
 	g_funcprotos(module->block->scope);
 	g_global_decls(module->block->scope);

@@ -49,8 +49,15 @@ typedef struct Array {
 	Value items[];
 } Array;
 
+typedef struct PrintFrame {
+	struct PrintFrame *parent;
+	Value value;
+} PrintFrame;
+
 static void print(Value value);
 static void value_decref(Value value);
+
+static PrintFrame *cur_print_frame = 0;
 
 static void error(char *msg, ...) {
 	va_list args;
@@ -73,6 +80,16 @@ static void print_repr(Value value) {
 }
 
 static void print_array(Array *array) {
+	for(
+		PrintFrame *frame = cur_print_frame->parent;
+		frame; frame = frame->parent
+	) {
+		if(frame->value.type == TY_ARRAY && frame->value.array == array) {
+			printf("[...]");
+			return;
+		}
+	}
+	
 	printf("[");
 	
 	for(int64_t i=0; i < array->length; i++) {
@@ -87,6 +104,9 @@ static void print_array(Array *array) {
 }
 
 static void print(Value value) {
+	PrintFrame frame = {.parent = cur_print_frame, .value = value};
+	cur_print_frame = &frame;
+	
 	switch(value.type) {
 		case TY_NULL:
 			printf("null");
@@ -107,6 +127,8 @@ static void print(Value value) {
 			printf("<function %p>", *(void**)&value.func);
 			break;
 	}
+	
+	cur_print_frame = cur_print_frame->parent;
 }
 
 static Value check_type(Type mintype, Type maxtype, Value value) {
@@ -171,10 +193,26 @@ static void value_assign(Value *target, Value value) {
 	*target = value;
 }
 
-static Value call(Value value, char *name) {
+static Value call(Value value) {
 	if(value.type != TY_FUNCTION) {
-		error("%s is not callable", name);
+		error("callee is not callable");
 	}
 	
 	return value.func();
+}
+
+static Value *subscript(Value array, Value index) {
+	if(array.type != TY_ARRAY) {
+		error("this is not an array");
+	}
+	
+	if(index.type != TY_INT) {
+		error("subscript index is not an integer");
+	}
+	
+	if(index.value < 0 || index.value >= array.array->length) {
+		error("array index out of range");
+	}
+	
+	return array.array->items + index.value;
 }

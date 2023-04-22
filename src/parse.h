@@ -13,26 +13,32 @@ typedef enum {
 	EX_BINOP,
 	EX_CALL,
 	EX_ARRAY,
+	EX_SUBSCRIPT,
 } ExprType;
 
 typedef struct Expr {
 	ExprType type;
 	int isconst;
+	int islvalue;
 	int has_side_effects;
+	Token *start;
 	struct Expr *next;
 	
 	union {
 		int64_t value; // int, bool
 		char *string; // string
-		Token *ident; // var, call
+		Token *ident; // var
+		struct Expr *callee; // call
 		struct Expr *left; // binop
 		struct Expr *items; // array
+		struct Expr *array; // subscript
 	};
 	
 	union {
 		struct Expr *right; // binop
 		int64_t tmp_id; // call
 		int64_t length; // array
+		struct Expr *index; // subscript
 	};
 	
 	union {
@@ -67,7 +73,8 @@ typedef struct Stmt {
 	struct Stmt *next;
 	
 	union {
-		Token *ident; // vardecl, assign, funcdecl
+		Token *ident; // vardecl, funcdecl
+		Expr *target; // assign
 	};
 	
 	union {
@@ -80,7 +87,6 @@ typedef struct Stmt {
 	
 	union {
 		DeclList *used_vars; // funcdecl
-		struct Stmt *decl; // assign
 	};
 	
 	union {
@@ -92,7 +98,7 @@ typedef struct Stmt {
 	};
 	
 	union {
-		int64_t func_id;
+		int64_t func_id; // funcdecl
 	};
 } Stmt;
 

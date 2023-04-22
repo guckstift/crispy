@@ -95,6 +95,15 @@ static Token *eat_punct(char punct)
 	return 0;
 }
 
+static Token *see_punct(char punct)
+{
+	if(cur->type == TK_PUNCT && cur->punct == punct) {
+		return cur;
+	}
+	
+	return 0;
+}
+
 static Expr *p_array()
 {
 	Token *start = eat_punct('[');
@@ -106,9 +115,11 @@ static Expr *p_array()
 	Expr *first = p_expr();
 	Expr *last = first;
 	int64_t length = 0;
+	int64_t has_side_effects = 0;
 	
 	if(first) {
 		length = 1;
+		has_side_effects = first->has_side_effects;
 		
 		while(eat_punct(',')) {
 			Expr *item = p_expr();
@@ -117,6 +128,7 @@ static Expr *p_array()
 				error("expected another array item after ','");
 			}
 			
+			has_side_effects = has_side_effects || item->has_side_effects;
 			last->next = item;
 			last = item;
 			length ++;
@@ -130,7 +142,8 @@ static Expr *p_array()
 	Expr *expr = calloc(1, sizeof(Expr));
 	expr->type = EX_ARRAY;
 	expr->isconst = 0;
-	expr->has_side_effects = 1; // TODO
+	expr->has_side_effects = has_side_effects;
+	expr->start = start;
 	expr->items = first;
 	expr->length = length;
 	return expr;
@@ -158,6 +171,7 @@ static Expr *p_atom()
 	}
 	
 	Expr *expr = calloc(1, sizeof(Expr));
+	expr->start = token;
 	
 	switch(token->type) {
 		case TK_INT:
@@ -173,6 +187,7 @@ static Expr *p_atom()
 		case TK_IDENT:
 			expr->type = EX_VAR;
 			expr->isconst = 0;
+			expr->islvalue = 1;
 			expr->ident = token;
 			break;
 		default:
@@ -192,19 +207,8 @@ static Expr *p_atom()
 	return expr;
 }
 
-static Expr *p_call_or_atom()
+static Expr *p_callexpr_x(Expr *callee)
 {
-	Token *ident = eat_token(TK_IDENT);
-	
-	if(!ident) {
-		return p_atom();
-	}
-	
-	if(!eat_punct('(')) {
-		cur = ident;
-		return p_atom();
-	}
-	
 	if(!eat_punct(')')) {
 		error("expected ')' after '('");
 	}
@@ -213,20 +217,67 @@ static Expr *p_call_or_atom()
 	expr->type = EX_CALL;
 	expr->isconst = 0;
 	expr->has_side_effects = 1;
-	expr->ident = ident;
+	expr->start = callee->start;
+	expr->callee = callee;
 	expr->tmp_id = next_tmp_id;
 	next_tmp_id ++;
 	return expr;
 }
 
+static Expr *p_subscript_x(Expr *array)
+{
+	Expr *index = p_expr();
+	
+	if(!index) {
+		error("expected index expression in []");
+	}
+	
+	if(!eat_punct(']')) {
+		error("expected ']' after index");
+	}
+	
+	Expr *expr = calloc(1, sizeof(Expr));
+	expr->type = EX_SUBSCRIPT;
+	expr->isconst = 0;
+	expr->islvalue = 1;
+	
+	expr->has_side_effects =
+		array->has_side_effects || index->has_side_effects;
+	
+	expr->start = array->start;
+	expr->array = array;
+	expr->index = index;
+	return expr;
+}
+
+static Expr *p_postfix()
+{
+	Expr *expr = p_atom();
+	
+	if(!expr) {
+		return 0;
+	}
+	
+	while(see_punct('(') || see_punct('[')) {
+		if(eat_punct('(')) {
+			expr = p_callexpr_x(expr);
+		}
+		else if(eat_punct('[')) {
+			expr = p_subscript_x(expr);
+		}
+	}
+	
+	return expr;
+}
+
 static Expr *p_binop()
 {
-	Expr *left = p_call_or_atom();
+	Expr *left = p_postfix();
 	
 	Token *op;
 	
 	while((op = eat_punct('+')) || (op = eat_punct('-'))) {
-		Expr *right = p_call_or_atom();
+		Expr *right = p_postfix();
 		
 		if(!right) {
 			error("expected right side of %c", op->punct);
@@ -240,6 +291,7 @@ static Expr *p_binop()
 			Expr *sum = calloc(1, sizeof(Expr));
 			sum->type = EX_INT;
 			sum->isconst = 1;
+			sum->start = left->start;
 			sum->value = op->punct == '+'
 				? left->value + right->value
 				: left->value - right->value;
@@ -253,6 +305,7 @@ static Expr *p_binop()
 			binop->has_side_effects =
 				left->has_side_effects || right->has_side_effects;
 			
+			binop->start = left->start;
 			binop->left = left;
 			binop->right = right;
 			binop->op = op->punct;
@@ -312,25 +365,14 @@ static Stmt *p_vardecl()
 	return stmt;
 }
 
-static Stmt *p_call_x(Token *ident)
+static Stmt *p_call_x(Expr *call)
 {
-	if(!eat_punct(')')) {
-		error("expected ')' after '('");
-	}
-	
 	if(!eat_punct(';')) {
 		error("expected ';' after function call");
 	}
 	
-	Expr *call = calloc(1, sizeof(Expr));
-	call->type = EX_CALL;
-	call->isconst = 0;
-	call->has_side_effects = 1;
-	call->ident = ident;
-	call->tmp_id = next_tmp_id;
-	next_tmp_id ++;
 	Stmt *stmt = calloc(1, sizeof(Stmt));
-	stmt->start = ident;
+	stmt->start = call->start;
 	stmt->end = cur;
 	stmt->scope = cur_scope;
 	stmt->type = ST_CALL;
@@ -338,7 +380,7 @@ static Stmt *p_call_x(Token *ident)
 	return stmt;
 }
 
-static Stmt *p_assign_x(Token *ident)
+static Stmt *p_assign_x(Expr *target)
 {
 	Expr *value = p_expr();
 	
@@ -352,27 +394,32 @@ static Stmt *p_assign_x(Token *ident)
 	
 	Stmt *stmt = calloc(1, sizeof(Stmt));
 	stmt->type = ST_ASSIGN;
-	stmt->start = ident;
+	stmt->start = target->start;
 	stmt->end = cur;
 	stmt->scope = cur_scope;
-	stmt->ident = ident;
+	stmt->target = target;
 	stmt->value = value;
 	return stmt;
 }
 
 static Stmt *p_assign_or_call()
 {
-	Token *ident = eat_token(TK_IDENT);
+	Expr *expr = p_expr();
 	
-	if(ident == 0) {
+	if(!expr) {
 		return 0;
 	}
 	
-	if(eat_punct('(')) {
-		return p_call_x(ident);
+	if(expr->type == EX_CALL) {
+		return p_call_x(expr);
 	}
-	else if(eat_punct('=')) {
-		return p_assign_x(ident);
+	
+	if(eat_punct('=')) {
+		if(expr->islvalue == 0) {
+			error("target is not assignable");
+		}
+		
+		return p_assign_x(expr);
 	}
 	
 	error("expected '=' or '('");
@@ -500,10 +547,10 @@ static Stmt *p_stmt()
 	Stmt *stmt;
 	
 	(stmt = p_vardecl()) ||
-	(stmt = p_assign_or_call()) ||
 	(stmt = p_print()) ||
 	(stmt = p_funcdecl()) ||
-	(stmt = p_return()) ;
+	(stmt = p_return()) ||
+	(stmt = p_assign_or_call()) ;
 	
 	return stmt;
 }

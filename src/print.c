@@ -1,28 +1,39 @@
 #include <stdio.h>
+#include <stdarg.h>
 #include "print.h"
 
 static void print_block(Block *block);
 static void print_expr(Expr *expr);
 
 static int level = 0;
+static FILE *outfile = 0;
+
+static void write(char *msg, ...)
+{
+	if(outfile == 0) outfile = stdout;
+	va_list args;
+	va_start(args, msg);
+	vfprintf(outfile, msg, args);
+	va_end(args);
+}
 
 void print_token(Token *token)
 {
 	switch(token->type) {
 		case TK_KEYWORD:
-			printf("%i: KEYWORD: %s", token->line, keywords[token->keyword]);
+			write("%i: KEYWORD: %s", token->line, keywords[token->keyword]);
 			break;
 		case TK_IDENT:
-			printf("%i: IDENT: %s", token->line, token->text);
+			write("%i: IDENT: %s", token->line, token->text);
 			break;
 		case TK_INT:
-			printf("%i: INT: %li", token->line, token->value);
+			write("%i: INT: %li", token->line, token->value);
 			break;
 		case TK_STRING:
-			printf("%i: STRING: \"%s\"", token->line, token->text);
+			write("%i: STRING: \"%s\"", token->line, token->text);
 			break;
 		case TK_PUNCT:
-			printf("%i: PUNCT: %c", token->line, token->punct);
+			write("%i: PUNCT: %c", token->line, token->punct);
 			break;
 	}
 }
@@ -31,59 +42,67 @@ void print_tokens(Token *tokens)
 {
 	for(Token *token = tokens; token->type != TK_EOF; token ++) {
 		print_token(token);
-		printf("\n");
+		write("\n");
 	}
 }
 
 static void print_indent()
 {
 	for(int i=0; i < level; i++) {
-		printf("\t");
+		write("\t");
 	}
 }
 
 static void print_callexpr(Expr *call)
 {
-	printf("%s", call->ident->text);
-	printf("()");
+	print_expr(call->callee);
+	write("()");
 }
 
 static void print_array(Expr *array)
 {
-	printf("[");
+	write("[");
 	
 	for(Expr *item = array->items; item; item = item->next) {
 		if(item != array->items) {
-			printf(", ");
+			write(", ");
 		}
 		
 		print_expr(item);
 	}
 	
-	printf("]");
+	write("]");
+}
+
+static void print_subscript(Expr *subscript)
+{
+	print_expr(subscript->array);
+	write("[");
+	print_expr(subscript->index);
+	write("]");
 }
 
 static void print_expr(Expr *expr)
 {
 	switch(expr->type) {
 		case EX_NULL:
-			printf("null");
+			write("null");
 			break;
 		case EX_BOOL:
-			printf("%s", expr->value ? "true" : "false");
+			write("%s", expr->value ? "true" : "false");
 			break;
 		case EX_INT:
-			printf("%li", expr->value);
+			write("%li", expr->value);
 			break;
 		case EX_STRING:
-			printf("\"%s\"", expr->string);
+			write("\"%s\"", expr->string);
 			break;
 		case EX_VAR:
-			printf("%s", expr->ident->text);
+			write("%s", expr->ident->text);
 			break;
 		case EX_BINOP:
 			print_expr(expr->left);
-			printf("%c", expr->op);
+			write("%c", expr->op);
 			print_expr(expr->right);
 			break;
 		case EX_CALL:
@@ -92,34 +111,43 @@ static void print_expr(Expr *expr)
 		case EX_ARRAY:
 			print_array(expr);
 			break;
+		case EX_SUBSCRIPT:
+			print_subscript(expr);
+			break;
 	}
+}
+
+void fprint_expr(FILE *fs, Expr *expr)
+{
+	outfile = fs;
+	print_expr(expr);
 }
 
 static void print_vardecl(Stmt *vardecl)
 {
-	printf("var ");
-	printf("%s", vardecl->ident->text);
+	write("var ");
+	write("%s", vardecl->ident->text);
 	
 	if(vardecl->init) {
-		printf(" = ");
+		write(" = ");
 		print_expr(vardecl->init);
 	}
 }
 
 static void print_assign(Stmt *assign)
 {
-	printf("%s", assign->ident->text);
-	printf(" = ");
+	print_expr(assign->target);
+	write(" = ");
 	print_expr(assign->value);
 }
 
 static void print_print(Stmt *print)
 {
-	printf("print ");
+	write("print ");
 	
 	for(Expr *value = print->values; value; value = value->next) {
 		if(value != print->values) {
-			printf(", ");
+			write(", ");
 		}
 		
 		print_expr(value);
@@ -128,14 +156,14 @@ static void print_print(Stmt *print)
 
 static void print_funcdecl(Stmt *funcdecl)
 {
-	printf("function ");
-	printf("%s", funcdecl->ident->text);
-	printf("() {\n");
+	write("function ");
+	write("%s", funcdecl->ident->text);
+	write("() {\n");
 	level++;
 	print_block(funcdecl->body);
 	level--;
 	print_indent();
-	printf("}");
+	write("}");
 }
 
 static void print_call(Stmt *call)
@@ -145,7 +173,7 @@ static void print_call(Stmt *call)
 
 static void print_return(Stmt *returnstmt)
 {
-	printf("return ");
+	write("return ");
 	
 	if(returnstmt->value) {
 		print_expr(returnstmt->value);
@@ -178,13 +206,14 @@ static void print_stmt(Stmt *stmt)
 
 void print_scope(Scope *scope)
 {
-	printf("# scope %p: ", (void*)scope);
+	outfile = stdout;
+	write("# scope %p: ", (void*)scope);
 	
 	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
-		printf("%s ", decl->ident->text);
+		write("%s ", decl->ident->text);
 	}
 	
-	printf("\n");
+	write("\n");
 }
 
 static void print_block(Block *block)
@@ -195,12 +224,13 @@ static void print_block(Block *block)
 	for(Stmt *stmt = block->stmts; stmt; stmt = stmt->next) {
 		print_indent();
 		print_stmt(stmt);
-		printf("\n");
+		write("\n");
 	}
 }
 
 void print_module(Module *module)
 {
 	level = 0;
+	outfile = stdout;
 	print_block(module->block);
 }

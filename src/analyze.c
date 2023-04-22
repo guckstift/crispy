@@ -73,11 +73,22 @@ static Stmt *a_ident(Token *ident)
 	return decl;
 }
 
+static void a_callexpr(Expr *call)
+{
+	a_expr(call->callee);
+}
+
 static void a_array(Expr *array)
 {
 	for(Expr *item = array->items; item; item = item->next) {
 		a_expr(item);
 	}
+}
+
+static void a_subscript(Expr *subscript)
+{
+	a_expr(subscript->array);
+	a_expr(subscript->index);
 }
 
 static void a_expr(Expr *expr)
@@ -91,10 +102,13 @@ static void a_expr(Expr *expr)
 			a_expr(expr->right);
 			break;
 		case EX_CALL:
-			a_ident(expr->ident);
+			a_callexpr(expr);
 			break;
 		case EX_ARRAY:
 			a_array(expr);
+			break;
+		case EX_SUBSCRIPT:
+			a_subscript(expr);
 			break;
 	}
 }
@@ -108,7 +122,7 @@ static void a_vardecl(Stmt *vardecl)
 
 static void a_assign(Stmt *assign)
 {
-	assign->decl = a_ident(assign->ident);
+	a_expr(assign->target);
 	a_expr(assign->value);
 }
 
