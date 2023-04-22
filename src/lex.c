@@ -28,7 +28,7 @@ Token *lex(char *src, char *src_end)
 		Token token;
 		
 		if(*src == '#') {
-			while(src <= src_end && *src != '\n') {
+			while(src < src_end && *src != '\n') {
 				src++;
 			}
 			
