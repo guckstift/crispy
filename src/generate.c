@@ -172,7 +172,7 @@ static void g_local_vardecl(Stmt *vardecl)
 	
 	if(vardecl->init) {
 		fprintf(file, "value_incref(");
-		g_expr(vardecl->init, 1);
+		g_expr(vardecl->init, 0);
 		fprintf(file, ")");
 	}
 	else {

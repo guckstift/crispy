@@ -28,10 +28,38 @@ Token *lex(char *src, char *src_end)
 		Token token;
 		
 		if(*src == '#') {
-			while(src <= src_end && *src != '\n') {
+			while(src < src_end && *src != '\n') {
 				src++;
 			}
 			
+			continue;
+		}
+		else if(src[0] == '/' && src[1] == '*') {
+			src += 2;
+			
+			while(src <= src_end) {
+				if(*src == '\n') {
+					line ++;
+				}
+				else if(src[0] == '*' && src[1] == '/') {
+					src += 2;
+					break;
+				}
+				else if(src == src_end) {
+					error("mult-line comment not terminated with */");
+				}
+				
+				src++;
+			}
+			
+			continue;
+		}
+		else if(isspace(*src)) {
+			if(*src == '\n') {
+				line ++;
+			}
+			
+			src ++;
 			continue;
 		}
 		else if(isalpha(*src) || *src == '_') {
@@ -132,14 +160,6 @@ Token *lex(char *src, char *src_end)
 		) {
 			token = (Token){.type = TK_PUNCT, .punct = *src, .line = line};
 			src ++;
-		}
-		else if(isspace(*src)) {
-			if(*src == '\n') {
-				line ++;
-			}
-			
-			src ++;
-			continue;
 		}
 		else if(src == src_end) {
 			token = (Token){.type = TK_EOF, .line = line};
