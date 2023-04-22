@@ -157,7 +157,9 @@ static void g_vardecl_assign(Stmt *vardecl)
 
 static void g_vardecl_stmt(Stmt *vardecl)
 {
-	g_tmp_assigns(vardecl->init);
+	if(vardecl->init) {
+		g_tmp_assigns(vardecl->init);
+	}
 	
 	if(vardecl->scope->parent) {
 		g_local_vardecl(vardecl);
