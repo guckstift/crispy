@@ -9,6 +9,8 @@ This document specifies the *crispy* programming language 0.4 and its compiler.
 * array subscript expressions
 * assign to array items
 * print arrays
+* new binary operators `*` and `%`
+* multi-line comments with `/*` and `*/`
 
 ## Compiler
 
@@ -49,30 +51,35 @@ decint = [0-9]+ ;
 hexint = "0x" [0-9a-fA-F]* ;
 binint = "0b" [01]* ;
 
-STRING = [\"] strchar [\"] ;
-strchar = [^\0-\x1f\"]
+STRING = ["] strchar ["] ;
+strchar = [^\0-\x1f"]
 
-PUNCT = ";" | "=" | "(" | ")" | "{" | "}" | "+" | "-" | "[" | "]" ;
+PUNCT = ";" | "=" | "(" | ")" | "{" | "}" | "+" | "-" | "*" | "%" | "[" | "]" ;
 
 -WHITE = [ \t\n\v\f\r]+ ;
 
 -COMMENT = "#" [^\n]* ;
+
+-MLCOMMENT = "/*" mlchar "*/" ;
+mlchar = [^*] | "*" [^/] ;
 ```
 
 ### Grammar
 
 ```
 module = stmt* ;
+
 stmt = vardecl | assign | print | funcdecl | call | return ;
 vardecl = "var" IDENT ( "=" expr )? ";" ;
-assign = expr "=" expr ";" ;
+assign = expr¹ "=" expr² ";" ;
 print = "print" expr ";" ;
 funcdecl = "function" IDENT "(" ")" "{" stmt* "}" ;
 call = IDENT "(" ")" ;
 return = "return" expr? ";" ;
+
 expr = binop ;
-binop = postfix ( op postfix )* ;
-op = "+" | "-" ;
+addop = mulop ( [+-] mulop )* ;
+mulop = postfix ( [*%] postfix )* ;
 postfix = atom postfix_x* ;
 postfix_x = array_index | call_x ;
 array_index = "[" expr "]" ;
@@ -103,7 +110,7 @@ redeclared in the same scope. A variable is not bound to a fixed type over its
 lifetime. If the initial value is omitted then the variable is initially `null`
 by default.
 
-An assignment stores a new value `expr`² into a target `expr`¹ which must be a
+An assignment stores a new value `expr²` into a target `expr¹` which must be a
 variable name `IDENT` or an array item `expr[index]`. If the target contains a
 variable then it must be declared by a previous corresponding `vardecl`, either
 in the same scope or in an enclosing outer scope.
@@ -155,11 +162,13 @@ An expression (`expr`) is one of these:
 * an array subscript `expr[index]`
 
 A binary operation combines two or more values with operators. Operators are
-`+` which adds values or `-` which subtracts the right value from the left one.
-The result is an integer. The single operands can be integers, booleans or even
+`+` which adds values, `-` which subtracts the right value from the left one,
+`*` which multiplies values or `%` which computes the modulus.
+
+The results are integers. The single operands can be integers, booleans or even
 `null`. `null` is interpreted as `0`, `true` as `1` and `false` as `0`. The
-binary expression is evaluated from left to right and the operator is
-left-associative.
+binary expression is evaluated from left to right and the operators are all
+left-associative. The operators `*` and `%` have precedence over `+` and `-`.
 
 A call expression is just like a call statement but evaluated to its return
 value.
