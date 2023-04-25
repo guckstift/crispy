@@ -1,228 +1,173 @@
+#include <stdarg.h>
+#include <stdbool.h>
 #include "generate.h"
-#include "runtime.c.res.h"
 
-static void g_expr(Expr *expr, int in_decl_init);
-static void g_tmp_assigns(Expr *expr);
+static void g_expr(Expr *expr, bool in_decl_init);
+static void g_stmt(Stmt *stmt);
 
 static FILE *file = 0;
-static int level = 0;
+static int64_t level = 0;
 
-static void g_indent()
+static void write(char *msg, ...)
 {
-	for(int i=0; i<level; i++) {
-		fprintf(file, "\t");
+	va_list args;
+	va_start(args, msg);
+	
+	while(*msg) {
+		if(*msg == '%') {
+			msg ++;
+			
+			if(*msg == 'i') {
+				fprintf(file, "%li", va_arg(args, int64_t));
+			}
+			else if(*msg == 's') {
+				fprintf(file, "%s", va_arg(args, char*));
+			}
+			else if(*msg == 'T') {
+				fprintf(file, "%s", va_arg(args, Token*)->text);
+			}
+			else if(*msg == 'F') {
+				Stmt *func = va_arg(args, Stmt*);
+				fprintf(file, "func%li_%s", func->func_id, func->ident->text);
+			}
+			else if(*msg == 'V') {
+				Stmt *vardecl = va_arg(args, Stmt*);
+				write("scope%i.%T", vardecl->scope->scope_id, vardecl->ident);
+			}
+			else if(*msg == '%') {
+				fputc('%', file);
+			}
+			else if(*msg == '>') {
+				for(int64_t i=0; i<level; i++) {
+					fputc('\t', file);
+				}
+			}
+			else if(*msg == 0) {
+				break;
+			}
+			else {
+				fputc(*msg, file);
+			}
+			
+			msg ++;
+		}
+		else {
+			fputc(*msg, file);
+			msg ++;
+		}
 	}
-}
-
-static void g_ident(Token *ident)
-{
-	fprintf(file, "var_%s", ident->text);
-}
-
-static void g_funcname(Stmt *func)
-{
-	fprintf(file, "func%li_%s", func->func_id, func->ident->text);
-}
-
-static void g_initvar(Token *ident)
-{
-	fprintf(file, "init_%s", ident->text);
+	
+	va_end(args);
 }
 
 static void g_tmpvar(Expr *expr)
 {
-	fprintf(file, "tmp%li", expr->tmp_id);
-}
-
-static void g_atom(Expr *expr, int in_decl_init)
-{
-	int no_decl_init_const = !in_decl_init && expr->isconst;
-	
-	switch(expr->type) {
-		case EX_NULL:
-			fprintf(file, "NULL_VALUE%s", !no_decl_init_const ? "_INIT" : "");
-			break;
-		case EX_BOOL:
-			fprintf(
-				file,
-				"BOOL_VALUE%s(%i)",
-				!no_decl_init_const ? "_INIT" : "",
-				!!expr->value
-			);
-			
-			break;
-		case EX_INT:
-			fprintf(
-				file,
-				"INT_VALUE%s(%li)",
-				!no_decl_init_const ? "_INIT" : "",
-				expr->value
-			);
-			
-			break;
-		case EX_STRING:
-			fprintf(
-				file,
-				"STRING_VALUE%s(\"%s\")",
-				!no_decl_init_const ? "_INIT" : "",
-				expr->string
-			);
-			
-			break;
-		case EX_VAR:
-			g_ident(expr->ident);
-			break;
-	}
-}
-
-static void g_binop(Expr *expr, int in_decl_init)
-{
-	fprintf(file, "INT_BINOP(");
-	g_expr(expr->left, in_decl_init);
-	fprintf(file, ", %c, ", expr->op);
-	g_expr(expr->right, in_decl_init);
-	fprintf(file, ")");
-}
-
-static void g_callexpr(Expr *call)
-{
-	fprintf(file, "call(");
-	g_expr(call->callee, 0);
-	fprintf(file, ")");
-}
-
-static void g_callexpr_tmp(Expr *call)
-{
-	g_tmpvar(call);
+	write("tmp%i", expr->tmp_id);
 }
 
 static void g_array(Expr *array)
 {
-	fprintf(
-		file, "ARRAY_VALUE(new_array(%li", array->length
-	);
+	write("ARRAY_VALUE(new_array(%i", array->length);
 	
 	for(Expr *item = array->items; item; item = item->next) {
-		fprintf(file, ", ");
-		g_expr(item, 0);
+		write(", ");
+		g_expr(item, false);
 	}
 	
-	fprintf(file, "))");
+	write("))");
 }
 
-static void g_subscript(Expr *subscript)
+static void g_call(Expr *call)
 {
-	fprintf(file, "*subscript(");
-	g_expr(subscript->array, 0);
-	fprintf(file, ", ");
-	g_expr(subscript->index, 0);
-	fprintf(file, ")");
+	write("call(");
+	g_expr(call->callee, false);
+	write(")");
 }
 
-static void g_expr(Expr *expr, int in_decl_init)
+static void g_expr(Expr *expr, bool in_decl_init)
 {
+	char *value_init_postfix = in_decl_init ? "_INIT" : "";
+	
 	switch(expr->type) {
+		case EX_NULL:
+			write("NULL_VALUE%s", value_init_postfix);
+			break;
+		case EX_BOOL:
+			write("BOOL_VALUE%s(%i)", value_init_postfix, !!expr->value);
+			break;
+		case EX_INT:
+			write("INT_VALUE%s(%i)", value_init_postfix, expr->value);
+			break;
+		case EX_STRING:
+			write("STRING_VALUE%s(\"%s\")", value_init_postfix, expr->string);
+			break;
+		case EX_VAR:
+			write("%V", expr->decl);
+			break;
 		case EX_BINOP:
-			g_binop(expr, in_decl_init);
+			write("INT_BINOP(");
+			g_expr(expr->left, false);
+			write(", %c, ", expr->op);
+			g_expr(expr->right, false);
+			write(")");
 			break;
 		case EX_CALL:
-			g_callexpr_tmp(expr);
+			g_tmpvar(expr);
 			break;
 		case EX_ARRAY:
 			g_array(expr);
 			break;
 		case EX_SUBSCRIPT:
-			g_subscript(expr);
+			write("*subscript(");
+			g_expr(expr->array, false);
+			write(", ");
+			g_expr(expr->index, false);
+			write(")");
 			break;
-		default:
-			g_atom(expr, in_decl_init);
-			break;
 	}
 }
 
-static void g_global_vardecl(Stmt *vardecl)
+static void g_scope(Scope *scope)
 {
-	fprintf(file, "Value ");
-	g_ident(vardecl->ident);
-	
-	if(vardecl->init && vardecl->init->isconst) {
-		fprintf(file, " = ");
-		g_expr(vardecl->init, 1);
-	}
-	else if(!vardecl->init) {
-		fprintf(file, " = ");
-		g_expr(&(Expr){.type = EX_NULL}, 1);
+	if(scope->decl_count == 0) {
+		return;
 	}
 	
-	fprintf(file, ";\n");
+	write("%>struct {\n");
 	
-	if(vardecl->early_use) {
-		fprintf(file, "int ");
-		g_initvar(vardecl->ident);
-		fprintf(file, " = 0;\n");
-	}
-}
-
-static void g_local_vardecl(Stmt *vardecl)
-{
-	g_indent();
-	fprintf(file, "Value ");
-	g_ident(vardecl->ident);
-	fprintf(file, " = ");
-	
-	if(vardecl->init) {
-		fprintf(file, "value_incref(");
-		g_expr(vardecl->init, 0);
-		fprintf(file, ")");
-	}
-	else {
-		g_expr(&(Expr){.type = EX_NULL}, 1);
+	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
+		write("\t%>Value %s;\n", decl->ident->text);
 	}
 	
-	fprintf(file, ";\n");
-}
-
-static void g_vardecl_assign(Stmt *vardecl)
-{
-	if(vardecl->init && !vardecl->init->isconst) {
-		g_indent();
-		fprintf(file, "value_assign(&");
-		g_ident(vardecl->ident);
-		fprintf(file, ", ");
-		g_expr(vardecl->init, 0);
-		fprintf(file, ");\n");
+	write("%>} scope%i = {\n", scope->scope_id);
+	
+	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
+		write("\t%>");
+		
+		if(decl->type == ST_VARDECL) {
+			if(decl->init_deferred) {
+				write("UNINITIALIZED");
+			}
+			else if(decl->init) {
+				g_expr(decl->init, true);
+			}
+			else {
+				write("NULL_VALUE_INIT");
+			}
+		}
+		else if(decl->type == ST_FUNCDECL) {
+			if(decl->init_deferred) {
+				write("UNINITIALIZED");
+			}
+			else {
+				write("FUNCTION_VALUE_INIT(%F)", decl);
+			}
+		}
+		
+		write(",\n");
 	}
 	
-	if(vardecl->early_use) {
-		g_indent();
-		g_initvar(vardecl->ident);
-		fprintf(file, " = 1;\n");
-	}
-}
-
-static void g_vardecl_stmt(Stmt *vardecl)
-{
-	if(vardecl->init) {
-		g_tmp_assigns(vardecl->init);
-	}
-	
-	if(vardecl->scope->parent) {
-		g_local_vardecl(vardecl);
-	}
-	else {
-		g_vardecl_assign(vardecl);
-	}
-}
-
-static void g_assign(Stmt *assign)
-{
-	g_tmp_assigns(assign->value);
-	g_indent();
-	fprintf(file, "value_assign(&");
-	g_expr(assign->target, 0);
-	fprintf(file, ", ");
-	g_expr(assign->value, 0);
-	fprintf(file, ");\n");
+	write("%>};\n");
 }
 
 static void g_tmp_assigns(Expr *expr)
@@ -237,12 +182,11 @@ static void g_tmp_assigns(Expr *expr)
 	}
 	else if(expr->type == EX_CALL) {
 		g_tmp_assigns(expr->callee);
-		g_indent();
-		fprintf(file, "Value ");
+		write("%>Value ");
 		g_tmpvar(expr);
-		fprintf(file, " = ");
-		g_callexpr(expr);
-		fprintf(file, ";\n");
+		write(" = ");
+		g_call(expr);
+		write(";\n");
 	}
 	else if(expr->type == EX_ARRAY) {
 		for(Expr *item = expr->items; item; item = item->next) {
@@ -255,124 +199,93 @@ static void g_tmp_assigns(Expr *expr)
 	}
 }
 
+static void g_vardecl(Stmt *decl)
+{
+	if(decl->init_deferred) {
+		Expr *init = decl->init;
+		
+		if(!init) {
+			init = &(Expr){.type = EX_NULL};
+		}
+		
+		g_tmp_assigns(init);
+		write("%>%V = ", decl);
+		g_expr(init, false);
+		write(";\n");
+	}
+}
+
 static void g_print(Stmt *print)
 {
 	for(Expr *value = print->values; value; value = value->next) {
-		g_tmp_assigns(value);
-	}
-	
-	for(Expr *value = print->values; value; value = value->next) {
 		if(value != print->values) {
-			g_indent();
-			fprintf(file, "printf(\" \");\n");
+			write("%>printf(\" \");\n");
 		}
 		
-		g_indent();
-		fprintf(file, "print(");
-		g_expr(value, 0);
-		fprintf(file, ");\n");
+		g_tmp_assigns(value);
+		write("%>print(");
+		g_expr(value, false);
+		write(");\n");
 	}
 	
-	g_indent();
-	fprintf(file, "printf(\"\\n\");\n");
+	write("%>printf(\"\\n\");\n");
 }
 
-static void g_funcdecl(Stmt *funcdecl)
+static void g_funcdecl(Stmt *decl)
 {
-	g_indent();
-	fprintf(file, "Value ");
-	g_ident(funcdecl->ident);
-	fprintf(file, " = FUNCTION_VALUE_INIT(");
-	g_funcname(funcdecl);
-	fprintf(file, ");\n");
+	if(decl->init_deferred) {
+		write("%>%V = FUNCTION_VALUE(%F);\n", decl, decl);
+	}
+}
+
+static void g_return(Stmt *stmt)
+{
+	if(stmt->scope->decl_count > 0) {
+		write("%>cur_scope_frame = cur_scope_frame->parent;\n");
+	}
 	
-	if(funcdecl->early_use) {
-		fprintf(file, "int ");
-		g_initvar(funcdecl->ident);
-		fprintf(file, " = 0;\n");
+	if(stmt->value) {
+		g_tmp_assigns(stmt->value);
 	}
-}
-
-static void g_funcdecl_init(Stmt *funcdecl)
-{
-	if(funcdecl->early_use) {
-		g_indent();
-		g_initvar(funcdecl->ident);
-		fprintf(file, " = 1;\n");
-	}
-}
-
-static void g_funcdecl_stmt(Stmt *funcdecl)
-{
-	if(funcdecl->scope->parent) {
-		g_funcdecl(funcdecl);
+	
+	write("%>return ");
+	
+	if(stmt->value) {
+		g_expr(stmt->value, false);
 	}
 	else {
-		g_funcdecl_init(funcdecl);
-	}
-}
-
-static void g_call(Stmt *call)
-{
-	g_tmp_assigns(call->call->callee);
-	g_indent();
-	fprintf(file, "value_decref(");
-	g_callexpr(call->call);
-	fprintf(file, ");\n");
-}
-
-static void g_cleanup_scope(Scope *scope)
-{
-	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
-		g_indent();
-		fprintf(file, "value_decref(");
-		g_ident(decl->ident);
-		fprintf(file, ");\n");
-	}
-}
-
-static void g_return(Stmt *returnstmt)
-{
-	if(returnstmt->value) {
-		g_tmp_assigns(returnstmt->value);
+		write("NULL_VALUE");
 	}
 	
-	if(returnstmt->value) {
-		g_indent();
-		fprintf(file, "result = value_incref(");
-		g_expr(returnstmt->value, 0);
-		fprintf(file, ");\n");
-	}
-	
-	g_cleanup_scope(returnstmt->scope);
-	g_indent();
-	
-	if(returnstmt->value) {
-		fprintf(file, "return result;\n");
-	}
-	else {
-		fprintf(file, "return NULL_VALUE;\n");
-	}
+	write(";\n");
 }
 
 static void g_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
 		case ST_VARDECL:
-			g_vardecl_stmt(stmt);
+			g_vardecl(stmt);
 			break;
 		case ST_ASSIGN:
-			g_assign(stmt);
+			g_tmp_assigns(stmt->target);
+			g_tmp_assigns(stmt->value);
+			write("%>");
+			g_expr(stmt->target, false);
+			write(" = ");
+			g_expr(stmt->value, false);
+			write(";\n");
 			break;
 		case ST_PRINT:
 			g_print(stmt);
 			break;
 		case ST_FUNCDECL:
-			g_funcdecl_stmt(stmt);
-			g_funcdecl_init(stmt);
+			g_funcdecl(stmt);
 			break;
 		case ST_CALL:
-			g_call(stmt);
+			g_tmp_assigns(stmt->call->callee);
+			write("%>");
+			g_call(stmt->call);
+			write(";\n");
 			break;
 		case ST_RETURN:
 			g_return(stmt);
@@ -384,19 +297,32 @@ static void g_block(Block *block)
 {
 	level ++;
 	
+	if(block->scope->parent) {
+		g_scope(block->scope);
+	}
+	
+	if(block->scope->decl_count > 0) {
+		write(
+			"%>cur_scope_frame = &(ScopeFrame){"
+			"cur_scope_frame, &scope%i, %i};\n",
+			block->scope->scope_id, block->scope->decl_count
+		);
+	}
+	
 	for(Stmt *stmt = block->stmts; stmt; stmt = stmt->next) {
 		g_stmt(stmt);
 	}
 	
-	g_cleanup_scope(block->scope);
+	if(block->scope->decl_count > 0) {
+		write("%>cur_scope_frame = cur_scope_frame->parent;\n");
+	}
+	
 	level --;
 }
 
 static void g_funcproto(Stmt *funcdecl)
 {
-	fprintf(file, "Value ");
-	g_funcname(funcdecl);
-	fprintf(file, "();\n");
+	write("Value %F();\n", funcdecl);
 }
 
 static void g_funcprotos(Scope *scope)
@@ -411,32 +337,23 @@ static void g_funcprotos(Scope *scope)
 
 static void g_funcimpl(Stmt *funcdecl)
 {
-	fprintf(file, "Value ");
-	g_funcname(funcdecl);
-	fprintf(file, "() {\n");
+	write("Value %F() {\n", funcdecl);
 	
 	for(
 		DeclItem *item = funcdecl->used_vars->first_item; item;
 		item = item->next
 	) {
-		g_indent();
-		fprintf(file, "\t""if(!");
-		g_initvar(item->decl->ident);
-		
-		fprintf(
-			file,
-			") error(\"variable %s used by function %s"
-			" is not initialized yet\");\n",
-			item->decl->ident->text, funcdecl->ident->text
+		write(
+			"\t%>if(%V.type == TYX_UNINITIALIZED) "
+			"error(\"variable %T used by function %T "
+			"is not initialized yet\");\n",
+			item->decl, item->decl->ident, funcdecl->ident
 		);
 	}
 	
-	g_indent();
-	fprintf(file, "\t""Value result;\n");
 	g_block(funcdecl->body);
-	g_indent();
-	fprintf(file, "\t""return NULL_VALUE;\n");
-	fprintf(file, "}\n");
+	write("\t""return NULL_VALUE;\n");
+	write("}\n");
 }
 
 static void g_funcimpls(Scope *scope)
@@ -449,31 +366,21 @@ static void g_funcimpls(Scope *scope)
 	}
 }
 
-static void g_global_decls(Scope *scope)
-{
-	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
-		if(decl->type == ST_VARDECL) {
-			g_global_vardecl(decl);
-		}
-		else if(decl->type == ST_FUNCDECL) {
-			g_funcdecl(decl);
-		}
-	}
-}
-
 void generate(Module *module, FILE *outfile)
 {
 	file = outfile;
 	level = 0;
 	
-	fprintf(file, "%s\n", RUNTIME_RES);
-	
+	write("#include \"src/runtime.c\"\n");
+	write("// function prototypes:\n");
 	g_funcprotos(module->block->scope);
-	g_global_decls(module->block->scope);
+	write("// global scope:\n");
+	g_scope(module->block->scope);
+	write("// function implementations:\n");
 	g_funcimpls(module->block->scope);
-		
-	fprintf(file, "int main(int argc, char **argv) {\n");
+	write("// main function:\n");
+	write("int main(int argc, char **argv) {\n");
 	g_block(module->block);
-	fprintf(file, "\treturn 0;\n");
-	fprintf(file, "}\n");
+	write("\t""return 0;\n");
+	write("}\n");
 }

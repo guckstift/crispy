@@ -12,6 +12,7 @@ static Token *cur = 0;
 static Scope *cur_scope = 0;
 static int next_func_id = 0;
 static int next_tmp_id = 0;
+static int next_scope_id = 0;
 
 static void error(char *msg, ...)
 {
@@ -65,6 +66,7 @@ static int declare(Stmt *decl)
 	}
 	
 	cur_scope->last_decl = decl;
+	cur_scope->decl_count ++;
 	return 1;
 }
 
@@ -221,6 +223,7 @@ static Expr *p_callexpr_x(Expr *callee)
 	expr->callee = callee;
 	expr->tmp_id = next_tmp_id;
 	next_tmp_id ++;
+	cur_scope->had_side_effects = 1;
 	return expr;
 }
 
@@ -383,6 +386,10 @@ static Stmt *p_vardecl()
 	stmt->ident = ident;
 	stmt->init = init;
 	
+	if(cur_scope->had_side_effects || init && !init->isconst) {
+		stmt->init_deferred = 1;
+	}
+	
 	if(!declare(stmt)) {
 		error("name %s already declared", ident->text);
 	}
@@ -533,6 +540,10 @@ static Stmt *p_funcdecl()
 	stmt->body = body;
 	stmt->func_id = func_id;
 	
+	if(cur_scope->had_side_effects) {
+		stmt->init_deferred = 1;
+	}
+	
 	if(!declare(stmt)) {
 		error("name %s already declared", ident->text);
 	}
@@ -609,6 +620,7 @@ static Block *p_block()
 {
 	Scope *scope = calloc(1, sizeof(Scope));
 	scope->parent = cur_scope;
+	scope->scope_id = next_scope_id ++;
 	cur_scope = scope;
 	
 	Stmt *stmts = p_stmts();

@@ -59,7 +59,6 @@ static Stmt *a_ident(Token *ident)
 		error(ident->line, "%s is declared later", ident->text);
 	}
 	else if(ident < decl->end) {
-		decl->early_use = 1;
 		add_used_var(decl);
 	}
 	else if(decl->scope != cur_scope && decl->scope->parent) {
@@ -95,7 +94,7 @@ static void a_expr(Expr *expr)
 {
 	switch(expr->type) {
 		case EX_VAR:
-			a_ident(expr->ident);
+			expr->decl = a_ident(expr->ident);
 			break;
 		case EX_BINOP:
 			a_expr(expr->left);

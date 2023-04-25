@@ -45,6 +45,7 @@ typedef struct Expr {
 		int64_t tmp_id; // call
 		int64_t length; // array
 		struct Expr *index; // subscript
+		struct Stmt *decl; // var
 	};
 	
 	union {
@@ -100,7 +101,7 @@ typedef struct Stmt {
 	};
 	
 	union {
-		int early_use; // vardecl, funcdecl
+		int init_deferred; // vardecl, funcdecl
 	};
 	
 	union {
@@ -112,6 +113,9 @@ typedef struct Scope {
 	struct Scope *parent;
 	Stmt *first_decl;
 	Stmt *last_decl;
+	int64_t decl_count;
+	int64_t scope_id;
+	int had_side_effects;
 } Scope;
 
 typedef struct Block {

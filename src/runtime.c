@@ -12,7 +12,10 @@
 #define STRING_VALUE(v) ((Value){.type = TY_STRING, .string = v})
 #define STRING_VALUE_INIT(v) {.type = TY_STRING, .string = v}
 #define ARRAY_VALUE(v) ((Value){.type = TY_ARRAY, .array = v})
+#define FUNCTION_VALUE(v) ((Value){.type = TY_FUNCTION, .func = v})
 #define FUNCTION_VALUE_INIT(v) {.type = TY_FUNCTION, .func = v}
+
+#define UNINITIALIZED {.type = TYX_UNINITIALIZED}
 
 #define INT_BINOP(left, op, right) \
 	(Value){ \
@@ -31,6 +34,8 @@ typedef enum {
 	TY_STRING,
 	TY_ARRAY,
 	TY_FUNCTION,
+	
+	TYX_UNINITIALIZED,
 } Type;
 
 typedef struct Value {
@@ -43,21 +48,7 @@ typedef struct Value {
 	};
 } Value;
 
-typedef enum {
-	REF_INITIAL,
-	REF_VISITED,
-	REF_ALIVE,
-	REF_DEAD,
-	REF_COLLECT,
-} RefState;
-
-typedef struct {
-	int64_t count;
-	RefState state;
-} Ref;
-
 typedef struct Array {
-	Ref ref;
 	int64_t length;
 	Value items[];
 } Array;
@@ -67,10 +58,17 @@ typedef struct PrintFrame {
 	Value value;
 } PrintFrame;
 
+typedef struct ScopeFrame {
+	struct ScopeFrame *parent;
+	void *values;
+	int64_t length;
+} ScopeFrame;
+
 static void print(Value value);
 static void value_decref(Value value);
 
 static PrintFrame *cur_print_frame = 0;
+static ScopeFrame *cur_scope_frame = 0;
 
 static void error(char *msg, ...) {
 	va_list args;
@@ -152,86 +150,6 @@ static Value check_type(Type mintype, Type maxtype, Value value) {
 	return value;
 }
 
-static void array_gc_visit(Array *array)
-{
-	if(array->ref.state != REF_VISITED) {
-		array->ref.state = REF_VISITED;
-		
-		for(int64_t i=0; i < array->length; i++) {
-			Value item = array->items[i];
-			
-			if(item.type == TY_ARRAY) {
-				Array *array_item = item.array;
-				array_item->ref.count --;
-				array_gc_visit(array_item);
-			}
-		}
-	}
-}
-
-static void array_gc_scan_alive(Array *array)
-{
-	if(array->ref.state != REF_ALIVE) {
-		array->ref.state = REF_ALIVE;
-		
-		for(int64_t i=0; i < array->length; i++) {
-			Value item = array->items[i];
-			
-			if(item.type == TY_ARRAY) {
-				Array *array_item = item.array;
-				array_item->ref.count ++;
-				array_gc_scan_alive(array_item);
-			}
-		}
-	}
-}
-
-static void array_gc_scan(Array *array)
-{
-	if(array->ref.state == REF_VISITED) {
-		if(array->ref.count > 0) {
-			array_gc_scan_alive(array);
-		}
-		else {
-			array->ref.state = REF_DEAD;
-			
-			for(int64_t i=0; i < array->length; i++) {
-				Value item = array->items[i];
-				
-				if(item.type == TY_ARRAY) {
-					Array *array_item = item.array;
-					array_gc_scan(array_item);
-				}
-			}
-		}
-	}
-}
-
-static void array_gc_collect(Array *array)
-{
-	if(array->ref.state == REF_DEAD) {
-		array->ref.state = REF_COLLECT;
-		
-		for(int64_t i=0; i < array->length; i++) {
-			Value item = array->items[i];
-			
-			if(item.type == TY_ARRAY) {
-				Array *array_item = item.array;
-				array_gc_collect(array_item);
-			}
-		}
-		
-		free(array);
-	}
-}
-
-static void array_gc(Array *array)
-{
-	array_gc_visit(array);
-	array_gc_scan(array);
-	array_gc_collect(array);
-}
-
 static Array *new_array(int64_t length, ...) {
 	Array *array = calloc(1, sizeof(Array) + length * sizeof(Value));
 	array->length = length;
@@ -247,50 +165,11 @@ static Array *new_array(int64_t length, ...) {
 	return array;
 }
 
-static Array *array_incref(Array *array) {
-	array->ref.count ++;
-	return array;
-}
-
-static void array_decref(Array *array) {
-	if(array->ref.count > 0) {
-		array->ref.count --;
-	}
-	
-	if(array->ref.count == 0) {
-		for(int64_t i=0; i < array->length; i++) {
-			value_decref(array->items[i]);
-		}
-		
-		free(array);
-	}
-	else {
-		array_gc(array);
-	}
-}
-
-static Value value_incref(Value value) {
-	if(value.type == TY_ARRAY) {
-		array_incref(value.array);
-	}
-	
-	return value;
-}
-
-static void value_decref(Value value) {
-	if(value.type == TY_ARRAY) {
-		array_decref(value.array);
-	}
-}
-
-static void value_assign(Value *target, Value value) {
-	value_decref(*target);
-	value_incref(value);
-	*target = value;
-}
-
 static Value call(Value value) {
-	if(value.type != TY_FUNCTION) {
+	if(value.type == TYX_UNINITIALIZED) {
+		error("function is not yet initialized");
+	}
+	else if(value.type != TY_FUNCTION) {
 		error("callee is not callable");
 	}
 	
