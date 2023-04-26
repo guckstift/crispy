@@ -345,6 +345,13 @@ static void g_stmt(Stmt *stmt)
 		case ST_IF:
 			g_if(stmt);
 			break;
+		case ST_WHILE:
+			write("%>while(");
+			g_expr(stmt->cond, false);
+			write(".value) {\n");
+			g_block(stmt->body);
+			write("%>}\n");
+			break;
 	}
 }
 

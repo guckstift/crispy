@@ -163,6 +163,12 @@ static void a_if(Stmt *ifstmt)
 	}
 }
 
+static void a_while(Stmt *stmt)
+{
+	a_expr(stmt->cond);
+	a_block(stmt->body);
+}
+
 static void a_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
@@ -186,6 +192,9 @@ static void a_stmt(Stmt *stmt)
 			break;
 		case ST_IF:
 			a_if(stmt);
+			break;
+		case ST_WHILE:
+			a_while(stmt);
 			break;
 	}
 }

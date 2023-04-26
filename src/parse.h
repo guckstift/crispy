@@ -61,6 +61,7 @@ typedef enum {
 	ST_CALL,
 	ST_RETURN,
 	ST_IF,
+	ST_WHILE,
 } StmtType;
 
 typedef struct DeclItem {
@@ -83,7 +84,7 @@ typedef struct Stmt {
 	union {
 		Token *ident; // vardecl, funcdecl
 		Expr *target; // assign
-		Expr *cond; // if
+		Expr *cond; // if, while
 	};
 	
 	union {
@@ -91,7 +92,7 @@ typedef struct Stmt {
 		Expr *value; // assign, return
 		Expr *values; // print
 		Expr *call; // call
-		struct Block *body; // funcdecl, if
+		struct Block *body; // funcdecl, if, while
 	};
 	
 	union {

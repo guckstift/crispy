@@ -13,6 +13,7 @@
 	f(return) \
 	f(if) \
 	f(else) \
+	f(while) \
 
 typedef enum {
 	TK_KEYWORD,

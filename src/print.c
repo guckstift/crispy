@@ -203,6 +203,18 @@ static void print_if(Stmt *ifstmt)
 	}
 }
 
+static void print_while(Stmt *stmt)
+{
+	write("while ");
+	print_expr(stmt->cond);
+	write(" {\n");
+	level++;
+	print_block(stmt->body);
+	level--;
+	print_indent();
+	write("}");
+}
+
 static void print_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
@@ -226,6 +238,9 @@ static void print_stmt(Stmt *stmt)
 			break;
 		case ST_IF:
 			print_if(stmt);
+			break;
+		case ST_WHILE:
+			print_while(stmt);
 			break;
 	}
 }

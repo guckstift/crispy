@@ -1,12 +1,7 @@
-if true {
-	var x = 9;
-		
-	function foo() {
-	}
-	
-	foo();
-}
-else {
-	var f;
-	print f;
+var x = 10;
+
+while x {
+	x = x - 1;
+	var fo = x + 1;
+	print fo;
 }
