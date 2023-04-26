@@ -74,6 +74,16 @@ typedef struct {
 	DeclItem *last_item;
 } DeclList;
 
+typedef struct TokenItem {
+	Token *token;
+	struct TokenItem *next;
+} TokenItem;
+
+typedef struct {
+	TokenItem *first_item;
+	TokenItem *last_item;
+} TokenList;
+
 typedef struct Stmt {
 	StmtType type;
 	Token *start;
@@ -110,6 +120,10 @@ typedef struct Stmt {
 	
 	union {
 		int64_t func_id; // funcdecl
+	};
+	
+	union {
+		TokenList *params;
 	};
 } Stmt;
 

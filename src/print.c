@@ -158,7 +158,18 @@ static void print_funcdecl(Stmt *funcdecl)
 {
 	write("function ");
 	write("%s", funcdecl->ident->text);
-	write("() {\n");
+	write("(");
+	TokenList *params = funcdecl->params;
+	
+	for(TokenItem *item = params->first_item; item; item = item->next) {
+		if(item != params->first_item) {
+			write(", ");
+		}
+		
+		write("%s", item->token->text);
+	}
+	
+	write(") {\n");
 	level++;
 	print_block(funcdecl->body);
 	level--;

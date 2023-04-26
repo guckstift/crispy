@@ -517,6 +517,31 @@ static Stmt *p_funcdecl()
 		error("expected '(' after function name");
 	}
 	
+	TokenList *params = calloc(1, sizeof(TokenList));
+	Token *param = eat_token(TK_IDENT);
+	
+	if(param) {
+		TokenItem *item = calloc(1, sizeof(TokenItem));
+		item->token = param;
+		item->next = 0;
+		params->first_item = item;
+		params->last_item = item;
+		
+		while(eat_punct(',')) {
+			Token *param = eat_token(TK_IDENT);
+			
+			if(param == 0) {
+				error("expected another parameter after ','");
+			}
+			
+			TokenItem *item = calloc(1, sizeof(TokenItem));
+			item->token = param;
+			item->next = 0;
+			params->last_item->next = item;
+			params->last_item = item;
+		}
+	}
+	
 	if(!eat_punct(')')) {
 		error("expected ')'");
 	}
@@ -539,6 +564,7 @@ static Stmt *p_funcdecl()
 	stmt->ident = ident;
 	stmt->body = body;
 	stmt->func_id = func_id;
+	stmt->params = params;
 	
 	if(cur_scope->had_side_effects) {
 		stmt->init_deferred = 1;
