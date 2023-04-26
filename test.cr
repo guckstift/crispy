@@ -1,15 +1,9 @@
-function bar()
-{
-}
 
-bar();
+print foo()[1];
 
 function foo()
 {
-	var y = 9;
-	return y;
+	return [1,2,3];
 }
 
-foo();
-
-var x = 9;
+print [1,2];

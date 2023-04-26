@@ -304,7 +304,7 @@ static void g_block(Block *block)
 	if(block->scope->decl_count > 0) {
 		write(
 			"%>cur_scope_frame = &(ScopeFrame){"
-			"cur_scope_frame, &scope%i, %i};\n",
+			"cur_scope_frame, (Value*)&scope%i, %i};\n",
 			block->scope->scope_id, block->scope->decl_count
 		);
 	}

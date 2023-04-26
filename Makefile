@@ -14,7 +14,7 @@ crispy: $(SRCS) $(HDRS)
 	gcc -o $@ $(CFLAGS) $(SRCS)
 
 test: test.c
-	gcc -o $@ $(CFLAGS) $^
+	gcc -g -o $@ $(CFLAGS) $^
 
 test.c: crispy test.cr
 	./crispy test.cr $@

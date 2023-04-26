@@ -60,15 +60,24 @@ typedef struct PrintFrame {
 
 typedef struct ScopeFrame {
 	struct ScopeFrame *parent;
-	void *values;
+	Value *values;
 	int64_t length;
 } ScopeFrame;
+
+typedef struct MemBlock {
+	struct MemBlock *next;
+	int64_t mark;
+	char data[];
+} MemBlock;
 
 static void print(Value value);
 static void value_decref(Value value);
 
 static PrintFrame *cur_print_frame = 0;
 static ScopeFrame *cur_scope_frame = 0;
+static MemBlock *first_block = 0;
+static MemBlock *last_block = 0;
+static int64_t block_count = 0;
 
 static void error(char *msg, ...) {
 	va_list args;
@@ -150,8 +159,77 @@ static Value check_type(Type mintype, Type maxtype, Value value) {
 	return value;
 }
 
+static void gc_mark(Value value)
+{
+	if(value.type == TY_ARRAY) {
+		Array *array = value.array;
+		MemBlock *block = (MemBlock*)array;
+		block --;
+		
+		if(block->mark == 1) {
+			return;
+		}
+		
+		block->mark = 1;
+		
+		for(int64_t i=0; i < array->length; i++) {
+			gc_mark(array->items[i]);
+		}
+	}
+}
+
+static void collect_garbage()
+{
+	for(ScopeFrame *frame = cur_scope_frame; frame; frame = frame->parent) {
+		for(int64_t i=0; i < frame->length; i++) {
+			Value value = frame->values[i];
+			gc_mark(value);
+		}
+	}
+	
+	for(MemBlock *block = first_block, *prev = 0; block;) {
+		if(block->mark == 0) {
+			if(block == first_block) {
+				first_block = block->next;
+				free(block);
+				block = first_block;
+			}
+			else {
+				prev->next = block->next;
+				free(block);
+				block = prev->next;
+			}
+			
+			block_count --;
+		}
+		else {
+			block->mark = 0;
+			prev = block;
+			block = block->next;
+		}
+		
+		last_block = prev;
+	}
+}
+
+static void *mem_alloc(int64_t size) {
+	collect_garbage();
+	MemBlock *block = calloc(1, sizeof(MemBlock) + size);
+	
+	if(first_block) {
+		last_block->next = block;
+	}
+	else {
+		first_block = block;
+	}
+	
+	last_block = block;
+	block_count ++;
+	return block->data;
+}
+
 static Array *new_array(int64_t length, ...) {
-	Array *array = calloc(1, sizeof(Array) + length * sizeof(Value));
+	Array *array = mem_alloc(sizeof(Array) + length * sizeof(Value));
 	array->length = length;
 	
 	va_list args;
