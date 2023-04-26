@@ -12,6 +12,7 @@
 	f(function) \
 	f(return) \
 	f(if) \
+	f(else) \
 
 typedef enum {
 	TK_KEYWORD,

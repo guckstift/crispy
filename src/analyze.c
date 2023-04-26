@@ -157,6 +157,10 @@ static void a_if(Stmt *ifstmt)
 {
 	a_expr(ifstmt->cond);
 	a_block(ifstmt->body);
+	
+	if(ifstmt->else_body) {
+		a_block(ifstmt->else_body);
+	}
 }
 
 static void a_stmt(Stmt *stmt)

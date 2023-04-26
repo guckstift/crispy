@@ -180,6 +180,29 @@ static void print_return(Stmt *returnstmt)
 	}
 }
 
+static void print_if(Stmt *ifstmt)
+{
+	write("if ");
+	print_expr(ifstmt->cond);
+	write(" {\n");
+	level++;
+	print_block(ifstmt->body);
+	level--;
+	print_indent();
+	write("}");
+	
+	if(ifstmt->else_body) {
+		write("\n");
+		print_indent();
+		write("else {\n");
+		level++;
+		print_block(ifstmt->else_body);
+		level--;
+		print_indent();
+		write("}");
+	}
+}
+
 static void print_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
@@ -202,14 +225,7 @@ static void print_stmt(Stmt *stmt)
 			print_return(stmt);
 			break;
 		case ST_IF:
-			write("if ");
-			print_expr(stmt->cond);
-			write(" {\n");
-			level++;
-			print_block(stmt->body);
-			level--;
-			print_indent();
-			write("}");
+			print_if(stmt);
 			break;
 	}
 }

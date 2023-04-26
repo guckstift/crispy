@@ -601,6 +601,20 @@ static Stmt *p_if()
 	if(!eat_punct('}')) {
 		error("expected '}' or another statement");
 	}
+		
+	Block *else_body = 0;
+	
+	if(eat_keyword(KW_else)) {
+		if(!eat_punct('{')) {
+			error("expected '{'");
+		}
+		
+		else_body = p_block();
+		
+		if(!eat_punct('}')) {
+			error("expected '}' or another statement");
+		}
+	}
 	
 	Stmt *stmt = calloc(1, sizeof(Stmt));
 	stmt->type = ST_IF;
@@ -609,6 +623,7 @@ static Stmt *p_if()
 	stmt->scope = cur_scope;
 	stmt->cond = cond;
 	stmt->body = body;
+	stmt->else_body = else_body;
 	
 	return stmt;
 }

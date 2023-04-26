@@ -304,6 +304,12 @@ static void g_if(Stmt *ifstmt)
 	write(".value) {\n");
 	g_block(ifstmt->body);
 	write("%>}\n");
+	
+	if(ifstmt->else_body) {
+		write("%>else {\n");
+		g_block(ifstmt->else_body);
+		write("%>}\n");
+	}
 }
 
 static void g_stmt(Stmt *stmt)

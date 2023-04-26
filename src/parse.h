@@ -96,6 +96,7 @@ typedef struct Stmt {
 	
 	union {
 		DeclList *used_vars; // funcdecl
+		struct Block *else_body; // if
 	};
 	
 	union {
