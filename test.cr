@@ -1,15 +1,10 @@
-var y = true;
-
-function foo()
-{
-	print "Hello";
-	x = 1;
-	print x;
-	y = 9;
-	print y;
+if true {
+	var x = 9;
+		
+	function foo() {
+		var y = x;
+		print x;
+	}
+	
+	foo();
 }
-
-foo();
-
-var x = 9;
-

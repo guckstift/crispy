@@ -201,13 +201,23 @@ static void print_stmt(Stmt *stmt)
 		case ST_RETURN:
 			print_return(stmt);
 			break;
+		case ST_IF:
+			write("if ");
+			print_expr(stmt->cond);
+			write(" {\n");
+			level++;
+			print_block(stmt->body);
+			level--;
+			print_indent();
+			write("}");
+			break;
 	}
 }
 
 void print_scope(Scope *scope)
 {
 	outfile = stdout;
-	write("# scope %p: ", (void*)scope);
+	write("# scope(funchost:%p) %p: ", scope->hosting_func, (void*)scope);
 	
 	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
 		write("%s ", decl->ident->text);

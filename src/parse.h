@@ -60,6 +60,7 @@ typedef enum {
 	ST_FUNCDECL,
 	ST_CALL,
 	ST_RETURN,
+	ST_IF,
 } StmtType;
 
 typedef struct DeclItem {
@@ -82,6 +83,7 @@ typedef struct Stmt {
 	union {
 		Token *ident; // vardecl, funcdecl
 		Expr *target; // assign
+		Expr *cond; // if
 	};
 	
 	union {
@@ -89,7 +91,7 @@ typedef struct Stmt {
 		Expr *value; // assign, return
 		Expr *values; // print
 		Expr *call; // call
-		struct Block *body; // funcdecl
+		struct Block *body; // funcdecl, if
 	};
 	
 	union {
@@ -116,6 +118,7 @@ typedef struct Scope {
 	int64_t decl_count;
 	int64_t scope_id;
 	int had_side_effects;
+	Stmt *hosting_func;
 } Scope;
 
 typedef struct Block {

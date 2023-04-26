@@ -54,7 +54,11 @@ static void a_var(Expr *var)
 		return;
 	}
 	
-	if(var->decl->scope != cur_scope && var->decl->scope->parent) {
+	if(
+		var->decl->scope->parent &&
+		cur_scope->hosting_func != var->decl->scope->hosting_func
+	) {
+		// using outer local var in a nested function
 		var->decl = 0;
 	}
 	else if(ident < var->decl->end) {
@@ -132,6 +136,7 @@ static void a_funcdecl(Stmt *funcdecl)
 	Stmt *old_funcdecl = cur_funcdecl;
 	cur_funcdecl = funcdecl;
 	funcdecl->used_vars = calloc(1, sizeof(DeclList));
+	funcdecl->body->scope->hosting_func = funcdecl;
 	a_block(funcdecl->body);
 	cur_funcdecl = old_funcdecl;
 }
@@ -146,6 +151,12 @@ static void a_return(Stmt *returnstmt)
 	if(returnstmt->value) {
 		a_expr(returnstmt->value);
 	}
+}
+
+static void a_if(Stmt *ifstmt)
+{
+	a_expr(ifstmt->cond);
+	a_block(ifstmt->body);
 }
 
 static void a_stmt(Stmt *stmt)
@@ -169,11 +180,18 @@ static void a_stmt(Stmt *stmt)
 		case ST_RETURN:
 			a_return(stmt);
 			break;
+		case ST_IF:
+			a_if(stmt);
+			break;
 	}
 }
 
 static void a_block(Block *block)
 {
+	if(!block->scope->hosting_func) {
+		block->scope->hosting_func = cur_scope ? cur_scope->hosting_func : 0;
+	}
+	
 	cur_scope = block->scope;
 	
 	for(Stmt *stmt = block->stmts; stmt; stmt = stmt->next) {

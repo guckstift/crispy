@@ -578,6 +578,41 @@ static Stmt *p_return()
 	return stmt;
 }
 
+static Stmt *p_if()
+{
+	Token *start = eat_keyword(KW_if);
+	
+	if(!start) {
+		return 0;
+	}
+	
+	Expr *cond = p_expr();
+	
+	if(!cond) {
+		error("expected a condition expression");
+	}
+	
+	if(!eat_punct('{')) {
+		error("expected '{'");
+	}
+	
+	Block *body = p_block();
+	
+	if(!eat_punct('}')) {
+		error("expected '}' or another statement");
+	}
+	
+	Stmt *stmt = calloc(1, sizeof(Stmt));
+	stmt->type = ST_IF;
+	stmt->start = start;
+	stmt->end = cur;
+	stmt->scope = cur_scope;
+	stmt->cond = cond;
+	stmt->body = body;
+	
+	return stmt;
+}
+
 static Stmt *p_stmt()
 {
 	Stmt *stmt;
@@ -586,6 +621,7 @@ static Stmt *p_stmt()
 	(stmt = p_print()) ||
 	(stmt = p_funcdecl()) ||
 	(stmt = p_return()) ||
+	(stmt = p_if()) ||
 	(stmt = p_assign_or_call()) ;
 	
 	return stmt;

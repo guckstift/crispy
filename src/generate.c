@@ -4,6 +4,7 @@
 
 static void g_expr(Expr *expr, bool in_decl_init);
 static void g_stmt(Stmt *stmt);
+static void g_block(Block *block);
 
 static FILE *file = 0;
 static int64_t level = 0;
@@ -20,6 +21,9 @@ static void write(char *msg, ...)
 			
 			if(*msg == 'i') {
 				fprintf(file, "%li", va_arg(args, int64_t));
+			}
+			else if(*msg == 'c') {
+				fprintf(file, "%c", va_arg(args, int));
 			}
 			else if(*msg == 's') {
 				fprintf(file, "%s", va_arg(args, char*));
@@ -293,6 +297,15 @@ static void g_return(Stmt *stmt)
 	write(";\n");
 }
 
+static void g_if(Stmt *ifstmt)
+{
+	write("%>if(");
+	g_expr(ifstmt->cond, false);
+	write(".value) {\n");
+	g_block(ifstmt->body);
+	write("%>}\n");
+}
+
 static void g_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
@@ -322,6 +335,9 @@ static void g_stmt(Stmt *stmt)
 			break;
 		case ST_RETURN:
 			g_return(stmt);
+			break;
+		case ST_IF:
+			g_if(stmt);
 			break;
 	}
 }
@@ -358,12 +374,15 @@ static void g_funcproto(Stmt *funcdecl)
 	write("Value %F();\n", funcdecl);
 }
 
-static void g_funcprotos(Scope *scope)
+static void g_funcprotos(Block *block)
 {
-	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
-		if(decl->type == ST_FUNCDECL) {
-			g_funcproto(decl);
-			g_funcprotos(decl->body->scope);
+	for(Stmt *stmt = block->stmts; stmt; stmt = stmt->next) {
+		if(stmt->type == ST_FUNCDECL) {
+			g_funcproto(stmt);
+			g_funcprotos(stmt->body);
+		}
+		else if(stmt->type == ST_IF) {
+			g_funcprotos(stmt->body);
 		}
 	}
 }
@@ -378,12 +397,15 @@ static void g_funcimpl(Stmt *funcdecl)
 	cur_funcdecl = 0;
 }
 
-static void g_funcimpls(Scope *scope)
+static void g_funcimpls(Block *block)
 {
-	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
-		if(decl->type == ST_FUNCDECL) {
-			g_funcimpl(decl);
-			g_funcimpls(decl->body->scope);
+	for(Stmt *stmt = block->stmts; stmt; stmt = stmt->next) {
+		if(stmt->type == ST_FUNCDECL) {
+			g_funcimpl(stmt);
+			g_funcimpls(stmt->body);
+		}
+		else if(stmt->type == ST_IF) {
+			g_funcimpls(stmt->body);
 		}
 	}
 }
@@ -395,11 +417,11 @@ void generate(Module *module, FILE *outfile)
 	
 	write("#include \"src/runtime.c\"\n");
 	write("// function prototypes:\n");
-	g_funcprotos(module->block->scope);
+	g_funcprotos(module->block);
 	write("// global scope:\n");
 	g_scope(module->block->scope);
 	write("// function implementations:\n");
-	g_funcimpls(module->block->scope);
+	g_funcimpls(module->block);
 	write("// main function:\n");
 	write("int main(int argc, char **argv) {\n");
 	g_block(module->block);
