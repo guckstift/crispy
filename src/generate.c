@@ -24,6 +24,9 @@ static void write(char *msg, ...)
 			else if(*msg == 's') {
 				fprintf(file, "%s", va_arg(args, char*));
 			}
+			else if(*msg == 'c') {
+				fprintf(file, "%c", va_arg(args, int));
+			}
 			else if(*msg == 'T') {
 				fprintf(file, "%s", va_arg(args, Token*)->text);
 			}
