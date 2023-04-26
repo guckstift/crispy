@@ -7,6 +7,7 @@ static void g_stmt(Stmt *stmt);
 
 static FILE *file = 0;
 static int64_t level = 0;
+static Stmt *cur_funcdecl = 0;
 
 static void write(char *msg, ...)
 {
@@ -65,6 +66,38 @@ static void g_tmpvar(Expr *expr)
 	write("tmp%i", expr->tmp_id);
 }
 
+static bool is_var_used_in_func(Stmt *decl)
+{
+	if(cur_funcdecl == 0) {
+		return false;
+	}
+	
+	DeclList *vars = cur_funcdecl->used_vars;
+	
+	for(DeclItem *item = vars->first_item; item; item = item->next) {
+		if(decl == item->decl) {
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+static void g_var(Expr *var)
+{
+	if(var->decl) {
+		if(is_var_used_in_func(var->decl)) {
+			write("*check_var(&%V, \"%T\")", var->decl, var->ident);
+		}
+		else {
+			write("%V", var->decl);
+		}
+	}
+	else {
+		write("error(\"name %T is not defined\")", var->ident);
+	}
+}
+
 static void g_array(Expr *array)
 {
 	write("ARRAY_VALUE(new_array(%i", array->length);
@@ -102,7 +135,7 @@ static void g_expr(Expr *expr, bool in_decl_init)
 			write("STRING_VALUE%s(\"%s\")", value_init_postfix, expr->string);
 			break;
 		case EX_VAR:
-			write("%V", expr->decl);
+			g_var(expr);
 			break;
 		case EX_BINOP:
 			write("INT_BINOP(");
@@ -337,23 +370,12 @@ static void g_funcprotos(Scope *scope)
 
 static void g_funcimpl(Stmt *funcdecl)
 {
+	cur_funcdecl = funcdecl;
 	write("Value %F() {\n", funcdecl);
-	
-	for(
-		DeclItem *item = funcdecl->used_vars->first_item; item;
-		item = item->next
-	) {
-		write(
-			"\t%>if(%V.type == TYX_UNINITIALIZED) "
-			"error(\"variable %T used by function %T "
-			"is not initialized yet\");\n",
-			item->decl, item->decl->ident, funcdecl->ident
-		);
-	}
-	
 	g_block(funcdecl->body);
 	write("\t""return NULL_VALUE;\n");
 	write("}\n");
+	cur_funcdecl = 0;
 }
 
 static void g_funcimpls(Scope *scope)

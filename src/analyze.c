@@ -22,7 +22,7 @@ static void error(int line, char *msg, ...)
 	exit(EXIT_FAILURE);
 }
 
-static void add_used_var(Stmt *decl)
+static void add_used_var_to_func(Stmt *decl)
 {
 	DeclList *vars = cur_funcdecl->used_vars;
 	
@@ -45,31 +45,26 @@ static void add_used_var(Stmt *decl)
 	vars->last_item = item;
 }
 
-static Stmt *a_ident(Token *ident)
+static void a_var(Expr *var)
 {
-	Stmt *decl = lookup(ident, cur_scope);
+	Token *ident = var->ident;
+	var->decl = lookup(ident, cur_scope);
 	
-	if(!decl) {
-		error(
-			ident->line, "could not find %s in scope %p",
-			ident->text, cur_scope
-		);
-	}
-	else if(decl->scope == cur_scope && ident < decl->end) {
-		error(ident->line, "%s is declared later", ident->text);
-	}
-	else if(ident < decl->end) {
-		add_used_var(decl);
-	}
-	else if(decl->scope != cur_scope && decl->scope->parent) {
-		error(
-			ident->line,
-			"can not use local variable %s in enclosed function",
-			ident->text
-		);
+	if(!var->decl) {
+		return;
 	}
 	
-	return decl;
+	if(var->decl->scope != cur_scope && var->decl->scope->parent) {
+		var->decl = 0;
+	}
+	else if(ident < var->decl->end) {
+		if(var->decl->scope == cur_scope) {
+			var->decl = 0;
+		}
+		else {
+			add_used_var_to_func(var->decl);
+		}
+	}
 }
 
 static void a_callexpr(Expr *call)
@@ -94,7 +89,7 @@ static void a_expr(Expr *expr)
 {
 	switch(expr->type) {
 		case EX_VAR:
-			expr->decl = a_ident(expr->ident);
+			a_var(expr);
 			break;
 		case EX_BINOP:
 			a_expr(expr->left);

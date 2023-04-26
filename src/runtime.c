@@ -79,13 +79,23 @@ static MemBlock *first_block = 0;
 static MemBlock *last_block = 0;
 static int64_t block_count = 0;
 
-static void error(char *msg, ...) {
+static Value error(char *msg, ...) {
 	va_list args;
 	va_start(args, msg);
 	fprintf(stderr, "error: ");
 	vfprintf(stderr, msg, args);
 	fprintf(stderr, "\n");
 	exit(EXIT_FAILURE);
+	return NULL_VALUE;
+}
+
+static Value *check_var(Value *var, char *name)
+{
+	if(var->type == TYX_UNINITIALIZED) {
+		error("name %s is not defined", name);
+	}
+	
+	return var;
 }
 
 static void print_repr(Value value) {
