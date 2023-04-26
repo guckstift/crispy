@@ -12,6 +12,10 @@ This document specifies the *crispy* programming language 0.4 and its compiler.
 * new binary operators `*` and `%`
 * multi-line comments with `/*` and `*/`
 
+## Changes
+
+* missing variable name errors all deferred to runtime
+
 ## Compiler
 
 The `crispy` compiler program translates *crispy* module files to C source
