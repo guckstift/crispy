@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include "generate.h"
 
-static void g_expr(Expr *expr, bool in_decl_init);
+static void g_expr(Expr *expr);
 static void g_stmt(Stmt *stmt);
 static void g_block(Block *block);
 
@@ -38,6 +38,9 @@ static void write(char *msg, ...)
 			else if(*msg == 'V') {
 				Stmt *vardecl = va_arg(args, Stmt*);
 				write("scope%i.%T", vardecl->scope->scope_id, vardecl->ident);
+			}
+			else if(*msg == 'E') {
+				g_expr(va_arg(args, Expr*));
 			}
 			else if(*msg == '%') {
 				fputc('%', file);
@@ -107,8 +110,7 @@ static void g_array(Expr *array)
 	write("ARRAY_VALUE(new_array(%i", array->length);
 	
 	for(Expr *item = array->items; item; item = item->next) {
-		write(", ");
-		g_expr(item, false);
+		write(", %E", item);
 	}
 	
 	write("))");
@@ -116,37 +118,47 @@ static void g_array(Expr *array)
 
 static void g_call(Expr *call)
 {
-	write("call(");
-	g_expr(call->callee, false);
-	write(")");
+	write("call(%E)", call->callee);
 }
 
-static void g_expr(Expr *expr, bool in_decl_init)
+static void g_const_init_expr(Expr *expr)
 {
-	char *value_init_postfix = in_decl_init ? "_INIT" : "";
-	
 	switch(expr->type) {
 		case EX_NULL:
-			write("NULL_VALUE%s", value_init_postfix);
+			write("NULL_VALUE_INIT");
 			break;
 		case EX_BOOL:
-			write("BOOL_VALUE%s(%i)", value_init_postfix, !!expr->value);
+			write("BOOL_VALUE_INIT(%i)", !!expr->value);
 			break;
 		case EX_INT:
-			write("INT_VALUE%s(%i)", value_init_postfix, expr->value);
+			write("INT_VALUE_INIT(%i)", expr->value);
 			break;
 		case EX_STRING:
-			write("STRING_VALUE%s(\"%s\")", value_init_postfix, expr->string);
+			write("STRING_VALUE_INIT(\"%s\")", expr->string);
+			break;
+	}
+}
+
+static void g_expr(Expr *expr)
+{
+	switch(expr->type) {
+		case EX_NULL:
+			write("NULL_VALUE");
+			break;
+		case EX_BOOL:
+			write("BOOL_VALUE(%i)", !!expr->value);
+			break;
+		case EX_INT:
+			write("INT_VALUE(%i)", expr->value);
+			break;
+		case EX_STRING:
+			write("STRING_VALUE(\"%s\")", expr->string);
 			break;
 		case EX_VAR:
 			g_var(expr);
 			break;
 		case EX_BINOP:
-			write("INT_BINOP(");
-			g_expr(expr->left, false);
-			write(", %c, ", expr->op);
-			g_expr(expr->right, false);
-			write(")");
+			write("INT_BINOP(%E, %c, %E)", expr->left, expr->op, expr->right);
 			break;
 		case EX_CALL:
 			g_tmpvar(expr);
@@ -155,11 +167,7 @@ static void g_expr(Expr *expr, bool in_decl_init)
 			g_array(expr);
 			break;
 		case EX_SUBSCRIPT:
-			write("*subscript(");
-			g_expr(expr->array, false);
-			write(", ");
-			g_expr(expr->index, false);
-			write(")");
+			write("*subscript(%E, %E)", expr->array, expr->index);
 			break;
 	}
 }
@@ -186,7 +194,7 @@ static void g_scope(Scope *scope)
 				write("UNINITIALIZED");
 			}
 			else if(decl->init) {
-				g_expr(decl->init, true);
+				g_const_init_expr(decl->init);
 			}
 			else {
 				write("NULL_VALUE_INIT");
@@ -246,9 +254,7 @@ static void g_vardecl(Stmt *decl)
 		}
 		
 		g_tmp_assigns(init);
-		write("%>%V = ", decl);
-		g_expr(init, false);
-		write(";\n");
+		write("%>%V = %E;\n", decl, init);
 	}
 }
 
@@ -260,9 +266,7 @@ static void g_print(Stmt *print)
 		}
 		
 		g_tmp_assigns(value);
-		write("%>print(");
-		g_expr(value, false);
-		write(");\n");
+		write("%>print(%E);\n", value);
 	}
 	
 	write("%>printf(\"\\n\");\n");
@@ -285,23 +289,17 @@ static void g_return(Stmt *stmt)
 		g_tmp_assigns(stmt->value);
 	}
 	
-	write("%>return ");
-	
 	if(stmt->value) {
-		g_expr(stmt->value, false);
+		write("%>return %E;\n", stmt->value);
 	}
 	else {
-		write("NULL_VALUE");
+		write("%>return NULL_VALUE;\n");
 	}
-	
-	write(";\n");
 }
 
 static void g_if(Stmt *ifstmt)
 {
-	write("%>if(");
-	g_expr(ifstmt->cond, false);
-	write(".value) {\n");
+	write("%>if(%E.value) {\n", ifstmt->cond);
 	g_block(ifstmt->body);
 	write("%>}\n");
 	
@@ -321,11 +319,7 @@ static void g_stmt(Stmt *stmt)
 		case ST_ASSIGN:
 			g_tmp_assigns(stmt->target);
 			g_tmp_assigns(stmt->value);
-			write("%>");
-			g_expr(stmt->target, false);
-			write(" = ");
-			g_expr(stmt->value, false);
-			write(";\n");
+			write("%>%E = %E;\n", stmt->target, stmt->value);
 			break;
 		case ST_PRINT:
 			g_print(stmt);
@@ -346,9 +340,7 @@ static void g_stmt(Stmt *stmt)
 			g_if(stmt);
 			break;
 		case ST_WHILE:
-			write("%>while(");
-			g_expr(stmt->cond, false);
-			write(".value) {\n");
+			write("%>while(%E.value) {\n", stmt->cond);
 			g_block(stmt->body);
 			write("%>}\n");
 			break;
