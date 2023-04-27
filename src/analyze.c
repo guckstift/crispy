@@ -74,6 +74,10 @@ static void a_var(Expr *var)
 static void a_callexpr(Expr *call)
 {
 	a_expr(call->callee);
+	
+	for(Expr *arg = call->args; arg; arg = arg->next) {
+		a_expr(arg);
+	}
 }
 
 static void a_array(Expr *array)

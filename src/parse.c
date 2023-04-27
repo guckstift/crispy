@@ -5,7 +5,7 @@
 #include "parse.h"
 
 static Stmt *p_stmts();
-static Block *p_block();
+static Block *p_block(TokenList *params);
 static Expr *p_expr();
 
 static Token *cur = 0;
@@ -211,8 +211,25 @@ static Expr *p_atom()
 
 static Expr *p_callexpr_x(Expr *callee)
 {
+	Expr *first = p_expr();
+	
+	if(first) {
+		Expr *last = first;
+		
+		while(eat_punct(',')) {
+			Expr *next = p_expr();
+			
+			if(next == 0) {
+				error("expected another argument after ','");
+			}
+			
+			last->next = next;
+			last = next;
+		}
+	}
+	
 	if(!eat_punct(')')) {
-		error("expected ')' after '('");
+		error("expected ')' after argument list");
 	}
 	
 	Expr *expr = calloc(1, sizeof(Expr));
@@ -222,6 +239,7 @@ static Expr *p_callexpr_x(Expr *callee)
 	expr->start = callee->start;
 	expr->callee = callee;
 	expr->tmp_id = next_tmp_id;
+	expr->args = first;
 	next_tmp_id ++;
 	cur_scope->had_side_effects = 1;
 	return expr;
@@ -550,7 +568,7 @@ static Stmt *p_funcdecl()
 		error("expected '{'");
 	}
 	
-	Block *body = p_block();
+	Block *body = p_block(params);
 	
 	if(!eat_punct('}')) {
 		error("expected '}' or another statement");
@@ -622,7 +640,7 @@ static Stmt *p_if()
 		error("expected '{'");
 	}
 	
-	Block *body = p_block();
+	Block *body = p_block(0);
 	
 	if(!eat_punct('}')) {
 		error("expected '}' or another statement");
@@ -635,7 +653,7 @@ static Stmt *p_if()
 			error("expected '{'");
 		}
 		
-		else_body = p_block();
+		else_body = p_block(0);
 		
 		if(!eat_punct('}')) {
 			error("expected '}' or another statement");
@@ -672,7 +690,7 @@ static Stmt *p_while()
 		error("expected '{'");
 	}
 	
-	Block *body = p_block();
+	Block *body = p_block(0);
 	
 	if(!eat_punct('}')) {
 		error("expected '}' or another statement");
@@ -729,12 +747,28 @@ static Stmt *p_stmts()
 	return first;
 }
 
-static Block *p_block()
+static Block *p_block(TokenList *params)
 {
 	Scope *scope = calloc(1, sizeof(Scope));
 	scope->parent = cur_scope;
 	scope->scope_id = next_scope_id ++;
 	cur_scope = scope;
+	
+	if(params) {
+		for(TokenItem *item = params->first_item; item; item = item->next) {
+			Stmt *stmt = calloc(1, sizeof(Stmt));
+			stmt->type = ST_VARDECL;
+			stmt->start = item->token;
+			stmt->end = stmt->start + 1;
+			stmt->scope = cur_scope;
+			stmt->ident = item->token;
+			stmt->is_param = 1;
+			
+			if(!declare(stmt)) {
+				error("name %s already declared", item->token->text);
+			}
+		}
+	}
 	
 	Stmt *stmts = p_stmts();
 	Block *block = calloc(1, sizeof(Block));
@@ -750,7 +784,7 @@ Module *parse(Token *tokens)
 	cur = tokens;
 	cur_scope = 0;
 	next_func_id = 0;
-	Block *block = p_block();
+	Block *block = p_block(0);
 	
 	if(!eat_token(TK_EOF)) {
 		error("unknown statement");

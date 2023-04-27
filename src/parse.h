@@ -50,6 +50,7 @@ typedef struct Expr {
 	
 	union {
 		char op; // binop
+		struct Expr *args; // call
 	};
 } Expr;
 
@@ -120,6 +121,7 @@ typedef struct Stmt {
 	
 	union {
 		int64_t func_id; // funcdecl
+		int is_param; // vardecl
 	};
 	
 	union {

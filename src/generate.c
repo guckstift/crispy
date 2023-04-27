@@ -118,7 +118,13 @@ static void g_array(Expr *array)
 
 static void g_call(Expr *call)
 {
-	write("call(%E)", call->callee);
+	write("call(%E", call->callee);
+	
+	for(Expr *arg = call->args; arg; arg = arg->next) {
+		write(", %E", arg);
+	}
+	
+	write(")");
 }
 
 static void g_const_init_expr(Expr *expr)
@@ -195,6 +201,9 @@ static void g_scope(Scope *scope)
 			}
 			else if(decl->init) {
 				g_const_init_expr(decl->init);
+			}
+			else if(decl->is_param) {
+				write("va_arg(args, Value)", decl->ident);
 			}
 			else {
 				write("NULL_VALUE_INIT");
@@ -376,7 +385,7 @@ static void g_block(Block *block)
 
 static void g_funcproto(Stmt *funcdecl)
 {
-	write("Value %F();\n", funcdecl);
+	write("Value %F(va_list args);\n", funcdecl);
 }
 
 static void g_funcprotos(Block *block)
@@ -395,7 +404,7 @@ static void g_funcprotos(Block *block)
 static void g_funcimpl(Stmt *funcdecl)
 {
 	cur_funcdecl = funcdecl;
-	write("Value %F() {\n", funcdecl);
+	write("Value %F(va_list args) {\n", funcdecl);
 	g_block(funcdecl->body);
 	write("\t""return NULL_VALUE;\n");
 	write("}\n");

@@ -56,7 +56,17 @@ static void print_indent()
 static void print_callexpr(Expr *call)
 {
 	print_expr(call->callee);
-	write("()");
+	write("(");
+	
+	for(Expr *arg = call->args; arg; arg = arg->next) {
+		if(arg != call->args) {
+			write(", ");
+		}
+		
+		print_expr(arg);
+	}
+	
+	write(")");
 }
 
 static void print_array(Expr *array)

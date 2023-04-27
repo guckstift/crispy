@@ -44,7 +44,7 @@ typedef struct Value {
 		int64_t value;
 		char *string;
 		struct Array *array;
-		struct Value (*func)();
+		struct Value (*func)(va_list args);
 	};
 } Value;
 
@@ -253,7 +253,7 @@ static Array *new_array(int64_t length, ...) {
 	return array;
 }
 
-static Value call(Value value) {
+static Value call(Value value, ...) {
 	if(value.type == TYX_UNINITIALIZED) {
 		error("function is not yet initialized");
 	}
@@ -261,7 +261,11 @@ static Value call(Value value) {
 		error("callee is not callable");
 	}
 	
-	return value.func();
+	va_list args;
+	va_start(args, value);
+	Value result = value.func(args);
+	va_end(args);
+	return result;
 }
 
 static Value *subscript(Value array, Value index) {

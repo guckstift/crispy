@@ -1,6 +1,6 @@
 function foo(a, b)
 {
+	print a, b;
 }
 
-var x = 1;
-print 99 + x;
+foo(1);
