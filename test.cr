@@ -1,8 +1,2 @@
-function foo()
-{
-	print "foo";
-}
-
-foo();
-
-var x = foo() + foo();
+var x = 9;
+var y = -x;

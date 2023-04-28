@@ -175,6 +175,10 @@ static Expr *p_binop()
 {
 	Expr *left = p_call_or_atom();
 	
+	if(!left) {
+		return 0;
+	}
+	
 	Token *op;
 	
 	while((op = eat_punct('+')) || (op = eat_punct('-'))) {
