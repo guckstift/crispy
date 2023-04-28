@@ -52,6 +52,10 @@ typedef struct Expr {
 		char op; // binop
 		struct Expr *args; // call
 	};
+	
+	union {
+		int64_t argcount; // call
+	};
 } Expr;
 
 typedef enum {
@@ -83,6 +87,7 @@ typedef struct TokenItem {
 typedef struct {
 	TokenItem *first_item;
 	TokenItem *last_item;
+	int64_t length;
 } TokenList;
 
 typedef struct Stmt {

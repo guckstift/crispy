@@ -212,9 +212,11 @@ static Expr *p_atom()
 static Expr *p_callexpr_x(Expr *callee)
 {
 	Expr *first = p_expr();
+	int64_t argcount = 0;
 	
 	if(first) {
 		Expr *last = first;
+		argcount = 1;
 		
 		while(eat_punct(',')) {
 			Expr *next = p_expr();
@@ -225,6 +227,7 @@ static Expr *p_callexpr_x(Expr *callee)
 			
 			last->next = next;
 			last = next;
+			argcount ++;
 		}
 	}
 	
@@ -240,6 +243,7 @@ static Expr *p_callexpr_x(Expr *callee)
 	expr->callee = callee;
 	expr->tmp_id = next_tmp_id;
 	expr->args = first;
+	expr->argcount = argcount;
 	next_tmp_id ++;
 	cur_scope->had_side_effects = 1;
 	return expr;
@@ -548,6 +552,7 @@ static Stmt *p_funcdecl()
 		item->next = 0;
 		params->first_item = item;
 		params->last_item = item;
+		params->length = 1;
 		
 		while(eat_punct(',')) {
 			Token *param = eat_token(TK_IDENT);
@@ -561,6 +566,7 @@ static Stmt *p_funcdecl()
 			item->next = 0;
 			params->last_item->next = item;
 			params->last_item = item;
+			params->length ++;
 		}
 	}
 	

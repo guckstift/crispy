@@ -12,8 +12,13 @@
 #define STRING_VALUE(v) ((Value){.type = TY_STRING, .string = v})
 #define STRING_VALUE_INIT(v) {.type = TY_STRING, .string = v}
 #define ARRAY_VALUE(v) ((Value){.type = TY_ARRAY, .array = v})
-#define FUNCTION_VALUE(v) ((Value){.type = TY_FUNCTION, .func = v})
-#define FUNCTION_VALUE_INIT(v) {.type = TY_FUNCTION, .func = v}
+
+#define FUNCTION_VALUE_INIT(v, a) { \
+	.type = TY_FUNCTION, \
+	.func = &(Function){.func = v, .arity = a} \
+}
+
+#define FUNCTION_VALUE(v, a) ((Value)FUNCTION_VALUE_INIT(v, a))
 
 #define UNINITIALIZED {.type = TYX_UNINITIALIZED}
 
@@ -44,7 +49,7 @@ typedef struct Value {
 		int64_t value;
 		char *string;
 		struct Array *array;
-		struct Value (*func)(va_list args);
+		struct Function *func;
 	};
 } Value;
 
@@ -52,6 +57,11 @@ typedef struct Array {
 	int64_t length;
 	Value items[];
 } Array;
+
+typedef struct Function {
+	struct Value (*func)(va_list args);
+	int64_t arity;
+} Function;
 
 typedef struct PrintFrame {
 	struct PrintFrame *parent;
@@ -253,17 +263,23 @@ static Array *new_array(int64_t length, ...) {
 	return array;
 }
 
-static Value call(Value value, ...) {
+static Value call(Value value, int64_t argcount, ...) {
 	if(value.type == TYX_UNINITIALIZED) {
 		error("function is not yet initialized");
 	}
 	else if(value.type != TY_FUNCTION) {
 		error("callee is not callable");
 	}
+	else if(value.func->arity != argcount) {
+		error(
+			"callee needs %li arguments but got %li",
+			value.func->arity, argcount
+		);
+	}
 	
 	va_list args;
-	va_start(args, value);
-	Value result = value.func(args);
+	va_start(args, argcount);
+	Value result = value.func->func(args);
 	va_end(args);
 	return result;
 }

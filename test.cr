@@ -4,4 +4,4 @@ function foo(a, b)
 	print a, b;
 }
 
-foo("Hello", "World");
+foo("Hello");

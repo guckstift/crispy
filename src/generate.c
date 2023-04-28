@@ -118,7 +118,7 @@ static void g_array(Expr *array)
 
 static void g_call(Expr *call)
 {
-	write("call(%E", call->callee);
+	write("call(%E, %i", call->callee, call->argcount);
 	
 	for(Expr *arg = call->args; arg; arg = arg->next) {
 		write(", %E", arg);
@@ -210,7 +210,7 @@ static void g_scope(Scope *scope)
 			}
 		}
 		else if(decl->type == ST_FUNCDECL) {
-			write("FUNCTION_VALUE_INIT(%F)", decl);
+			write("FUNCTION_VALUE_INIT(%F, %i)", decl, decl->params->length);
 		}
 		
 		write(",\n");
@@ -285,7 +285,10 @@ static void g_print(Stmt *print)
 static void g_funcdecl(Stmt *decl)
 {
 	if(decl->init_deferred) {
-		write("%>%V = FUNCTION_VALUE(%F);\n", decl, decl);
+		write(
+			"%>%V = FUNCTION_VALUE(%F, %i);\n",
+			decl, decl, decl->params->length
+		);
 	}
 }
 
