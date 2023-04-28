@@ -141,10 +141,21 @@ Token *lex(char *src, char *src_end)
 					error("no control characters allowed in string");
 				}
 				else if(*src == '\\') {
-					error("no escape sequences supported");
+					src ++;
+					
+					if(
+						*src == '\\' || *src == '"' || *src == 'n' ||
+						*src == 't'
+					) {
+						src ++;
+					}
+					else {
+						error("unsupported escape sequence");
+					}
 				}
-				
-				src++;
+				else {
+					src++;
+				}
 			}
 			
 			int length = src - start;

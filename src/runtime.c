@@ -119,7 +119,27 @@ static Value *check_var(Value *var, char *name)
 static void print_repr(Value value) {
 	if(value.type == TY_STRING) {
 		printf("\"");
-		print(value);
+		
+		for(char *c = value.string; *c; c++) {
+			if(*c >= 0 && *c <= 0x1f || *c == '"') {
+				if(*c == '\\') {
+					printf("\\\\");
+				}
+				else if(*c == '"') {
+					printf("\\\"");
+				}
+				else if(*c == '\n') {
+					printf("\\n");
+				}
+				else if(*c == '\t') {
+					printf("\\t");
+				}
+			}
+			else {
+				printf("%c", *c);
+			}
+		}
+		
 		printf("\"");
 	}
 	else {

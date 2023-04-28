@@ -1,1 +1,4 @@
-print -8;
+var x = "\t\"Hello\"\nWorld";
+
+print x;
+print[x];
