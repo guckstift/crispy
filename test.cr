@@ -11,5 +11,5 @@ function foo()
 
 foo();
 
-var x = 9 - y;
+var x = - y;
 

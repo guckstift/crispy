@@ -299,6 +299,10 @@ static Expr *p_binop(int level)
 	
 	Expr *left = p_binop(level + 1);
 	
+	if(!left) {
+		return 0;
+	}
+	
 	Token *op;
 	
 	while(op = p_operator(level)) {
