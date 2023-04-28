@@ -78,7 +78,7 @@ vardecl = "var" IDENT ( "=" expr )? ";" ;
 assign = expr¹ "=" expr² ";" ;
 print = "print" expr ";" ;
 funcdecl = "function" IDENT "(" ")" "{" stmt* "}" ;
-call = IDENT "(" ")" ;
+call = postfix call_x ;
 return = "return" expr? ";" ;
 
 expr = binop ;
@@ -142,8 +142,9 @@ variable might even be declared further down in the source code but then the
 function must be called after the variable declaration has been executed,
 otherwise it is an error.
 
-A `call` invokes a function referenced with `IDENT`. If `IDENT` is not storing
-a reference to a function object it is not allowed to be called.
+A `call` invokes a function referenced by an expression `postfix`. If the
+expression is not storing a reference to a function object it is not allowed to
+be called.
 
 A `return` statement can only be used inside a function body. It terminates the
 function and optionally lets the it return a value `expr`. If the return value
