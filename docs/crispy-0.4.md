@@ -56,7 +56,7 @@ hexint = "0x" [0-9a-fA-F]* ;
 binint = "0b" [01]* ;
 
 STRING = ["] strchar ["] ;
-strchar = [^\0-\x1f"]
+strchar = [^\0-\x1f"] ;
 
 PUNCT = ";" | "=" | "(" | ")" | "{" | "}" | "+" | "-" | "*" | "%" | "[" | "]" ;
 
@@ -82,6 +82,7 @@ call = IDENT "(" ")" ;
 return = "return" expr? ";" ;
 
 expr = binop ;
+binop = addop ;
 addop = mulop ( [+-] mulop )* ;
 mulop = postfix ( [*%] postfix )* ;
 postfix = atom postfix_x* ;
