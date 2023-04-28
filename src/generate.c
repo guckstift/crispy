@@ -37,7 +37,7 @@ static void write(char *msg, ...)
 			}
 			else if(*msg == 'V') {
 				Stmt *vardecl = va_arg(args, Stmt*);
-				write("scope%i.%T", vardecl->scope->scope_id, vardecl->ident);
+				write("scope%i.m_%T", vardecl->scope->scope_id, vardecl->ident);
 			}
 			else if(*msg == 'E') {
 				g_expr(va_arg(args, Expr*));
@@ -187,7 +187,7 @@ static void g_scope(Scope *scope)
 	write("%>struct {\n");
 	
 	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
-		write("\t%>Value %s;\n", decl->ident->text);
+		write("\t%>Value m_%s;\n", decl->ident->text);
 	}
 	
 	write("%>} scope%i = {\n", scope->scope_id);

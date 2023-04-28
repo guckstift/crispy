@@ -1,6 +1,3 @@
-function foo(a, b)
-{
-	print a, b;
-}
+var auto;
 
-foo(1);
+print auto;
