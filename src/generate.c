@@ -195,33 +195,34 @@ static void g_scope(Scope *scope)
 	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
 		write("\t%>");
 		
-		if(decl->type == ST_VARDECL) {
-			if(decl->init_deferred) {
+		if(decl->init_deferred) {
+			write("UNINITIALIZED");
+		}
+		else if(decl->type == ST_VARDECL) {
+			if(decl->is_param) {
 				write("UNINITIALIZED");
 			}
 			else if(decl->init) {
 				g_const_init_expr(decl->init);
-			}
-			else if(decl->is_param) {
-				write("va_arg(args, Value)", decl->ident);
 			}
 			else {
 				write("NULL_VALUE_INIT");
 			}
 		}
 		else if(decl->type == ST_FUNCDECL) {
-			if(decl->init_deferred) {
-				write("UNINITIALIZED");
-			}
-			else {
-				write("FUNCTION_VALUE_INIT(%F)", decl);
-			}
+			write("FUNCTION_VALUE_INIT(%F)", decl);
 		}
 		
 		write(",\n");
 	}
 	
 	write("%>};\n");
+	
+	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
+		if(decl->type == ST_VARDECL && decl->is_param) {
+			write("%>%V = va_arg(args, Value);\n", decl);
+		}
+	}
 }
 
 static void g_tmp_assigns(Expr *expr)

@@ -1,3 +1,7 @@
-var auto;
+function foo(a, b)
+{
+	var x = a;
+	print a, b;
+}
 
-print auto;
+foo("Hello", "World");
