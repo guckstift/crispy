@@ -32,6 +32,14 @@
 		).value \
 	} \
 
+#define INT_UNARY(op, right) \
+	(Value){ \
+		.type = TY_INT, \
+		.value = op check_type( \
+			TY_NULL, TY_INT, (right) \
+		).value \
+	} \
+
 typedef enum {
 	TY_NULL,
 	TY_BOOL,

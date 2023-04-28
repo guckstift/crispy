@@ -124,6 +124,10 @@ static void print_expr(Expr *expr)
 		case EX_SUBSCRIPT:
 			print_subscript(expr);
 			break;
+		case EX_UNARY:
+			write("%c", expr->op);
+			print_expr(expr->subexpr);
+			break;
 	}
 }
 

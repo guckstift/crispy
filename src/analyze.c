@@ -112,6 +112,9 @@ static void a_expr(Expr *expr)
 		case EX_SUBSCRIPT:
 			a_subscript(expr);
 			break;
+		case EX_UNARY:
+			a_expr(expr->subexpr);
+			break;
 	}
 }
 

@@ -14,6 +14,7 @@ typedef enum {
 	EX_CALL,
 	EX_ARRAY,
 	EX_SUBSCRIPT,
+	EX_UNARY,
 } ExprType;
 
 typedef enum {
@@ -38,6 +39,7 @@ typedef struct Expr {
 		struct Expr *left; // binop
 		struct Expr *items; // array
 		struct Expr *array; // subscript
+		struct Expr *subexpr; // unary
 	};
 	
 	union {
@@ -49,7 +51,7 @@ typedef struct Expr {
 	};
 	
 	union {
-		char op; // binop
+		char op; // binop, unary
 		struct Expr *args; // call
 	};
 	

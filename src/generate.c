@@ -175,6 +175,9 @@ static void g_expr(Expr *expr)
 		case EX_SUBSCRIPT:
 			write("*subscript(%E, %E)", expr->array, expr->index);
 			break;
+		case EX_UNARY:
+			write("INT_UNARY(%c, %E)", expr->op, expr->subexpr);
+			break;
 	}
 }
 

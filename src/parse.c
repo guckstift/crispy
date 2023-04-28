@@ -295,6 +295,33 @@ static Expr *p_postfix()
 	return expr;
 }
 
+static Expr *p_unary()
+{
+	Token *op = 0;
+	
+	(op = eat_punct('+')) ||
+	(op = eat_punct('-')) ;
+	
+	if(op == 0) {
+		return p_postfix();
+	}
+	
+	Expr *subexpr = p_unary();
+	
+	if(subexpr == 0) {
+		error("expected expression after unary %c", op->punct);
+	}
+	
+	Expr *expr = calloc(1, sizeof(Expr));
+	expr->type = EX_UNARY;
+	expr->isconst = subexpr->isconst;
+	expr->has_side_effects = subexpr->has_side_effects;
+	expr->start = op;
+	expr->subexpr = subexpr;
+	expr->op = op->punct;
+	return expr;
+}
+
 static Token *p_operator(int level)
 {
 	Token *op = 0;
@@ -316,7 +343,7 @@ static Token *p_operator(int level)
 static Expr *p_binop(int level)
 {
 	if(level == _OPLEVEL_COUNT) {
-		return p_postfix();
+		return p_unary();
 	}
 	
 	Expr *left = p_binop(level + 1);
