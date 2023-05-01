@@ -33,6 +33,9 @@ typedef enum {
 typedef struct Token {
 	TokenType type;
 	int line;
+	char *linep;
+	char *start;
+	int64_t length;
 	union {
 		Keyword keyword;
 		char *text;

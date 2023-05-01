@@ -11,6 +11,7 @@ char *keywords[] = {
 };
 
 static int line = 1;
+static char *linep = 0;
 
 static void error(char *msg)
 {
@@ -23,9 +24,10 @@ Token *lex(char *src, char *src_end)
 	Token *tokens = 0;
 	int num_tokens = 0;
 	line = 1;
+	linep = src;
 	
 	while(src <= src_end) {
-		Token token;
+		Token token = {.line = line, .linep = linep, .start = src};
 		
 		if(*src == '#') {
 			while(src < src_end && *src != '\n') {
@@ -40,6 +42,7 @@ Token *lex(char *src, char *src_end)
 			while(src <= src_end) {
 				if(*src == '\n') {
 					line ++;
+					linep = src;
 				}
 				else if(src[0] == '*' && src[1] == '/') {
 					src += 2;
@@ -57,6 +60,7 @@ Token *lex(char *src, char *src_end)
 		else if(isspace(*src)) {
 			if(*src == '\n') {
 				line ++;
+				linep = src;
 			}
 			
 			src ++;
@@ -72,14 +76,14 @@ Token *lex(char *src, char *src_end)
 			int length = src - start;
 			char *text = calloc(length + 1, 1);
 			memcpy(text, start, length);
-			token = (Token){.type = TK_IDENT, .text = text, .line = line};
+			token.type = TK_IDENT;
+			token.length = length;
+			token.text = text;
 			
 			for(int i=0; i < sizeof(keywords) / sizeof(char*); i++) {
 				if(strcmp(keywords[i], text) == 0) {
-					token = (Token){
-						.type = TK_KEYWORD, .keyword = i, .line = line
-					};
-					
+					token.type = TK_KEYWORD;
+					token.keyword = i;
 					break;
 				}
 			}
@@ -104,7 +108,9 @@ Token *lex(char *src, char *src_end)
 				src ++;
 			}
 			
-			token = (Token){.type = TK_INT, .value = value, .line = line};
+			token.type = TK_INT;
+			token.length = src - token.start;
+			token.value = value;
 		}
 		else if(src[0] == '0' && src[1] == 'b') {
 			src += 2;
@@ -116,7 +122,9 @@ Token *lex(char *src, char *src_end)
 				src ++;
 			}
 			
-			token = (Token){.type = TK_INT, .value = value, .line = line};
+			token.type = TK_INT;
+			token.length = src - token.start;
+			token.value = value;
 		}
 		else if(isdigit(*src)) {
 			int64_t value = 0;
@@ -127,7 +135,9 @@ Token *lex(char *src, char *src_end)
 				src ++;
 			}
 			
-			token = (Token){.type = TK_INT, .value = value, .line = line};
+			token.type = TK_INT;
+			token.length = src - token.start;
+			token.value = value;
 		}
 		else if(*src == '"') {
 			src ++;
@@ -161,8 +171,10 @@ Token *lex(char *src, char *src_end)
 			int length = src - start;
 			char *text = calloc(length + 1, 1);
 			memcpy(text, start, length);
-			token = (Token){.type = TK_STRING, .text = text, .line = line};
 			src ++;
+			token.type = TK_STRING;
+			token.length = src - token.start;
+			token.text = text;
 		}
 		else if(
 			*src == ';' || *src == '=' || *src == '(' || *src == ')' ||
@@ -170,11 +182,14 @@ Token *lex(char *src, char *src_end)
 			*src == '[' || *src == ']' || *src == '*' || *src == '%' ||
 			*src == ','
 		) {
-			token = (Token){.type = TK_PUNCT, .punct = *src, .line = line};
+			token.type = TK_PUNCT;
+			token.length = 1;
+			token.punct = *src;
 			src ++;
 		}
 		else if(src == src_end) {
-			token = (Token){.type = TK_EOF, .line = line};
+			token.type = TK_EOF;
+			token.length = 0;
 			src++;
 		}
 		else {
