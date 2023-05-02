@@ -8,6 +8,7 @@ This document specifies the *crispy* programming language 0.5 and its compiler.
 * while statement
 * function arguments
 * unary + and -
+* comparison operators (non-chaining) == != <= >= < >
 * escape sequences \n \t \" and slash
 
 ## Compiler
@@ -54,6 +55,7 @@ strchar = [^\0-\x1f"\\] | escseq ;
 escseq = "\\" [nt"\\] ;
 
 PUNCT =
+	"==" | "!=" | "<=" | ">=" | "<" | ">" |
 	";" | "=" | "(" | ")" | "{" | "}" | "+" | "-" | "*" | "%" | "[" | "]" |
 	"," ;
 
@@ -83,7 +85,9 @@ else = "else" "{" stmt* "}" ;
 while = "while" expr "{" stmt* "}" ;
 
 expr = binop ;
-binop = addop ;
+binop = cmpop ;
+cmpop = addop ( cmp addop )? ;
+cmp = "==" | "!=" | "<=" | ">=" | "<" | ">" ;
 addop = mulop ( [+-] mulop )* ;
 mulop = unary ( [*%] unary )* ;
 unary = [+-] unary | postfix ;
@@ -165,8 +169,9 @@ An expression (`expr`) is one of these:
 * a variable identifier (`IDENT`)
 * a boolean literal (`true` or `false`)
 * the `null` value
-* a function call to `IDENT`
+* a function call
 * a binary operation (`binop`)
+* an unary operation (`unary`)
 * an `array` literal
 * an array subscript `expr[index]`
 
