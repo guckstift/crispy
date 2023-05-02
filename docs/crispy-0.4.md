@@ -162,7 +162,7 @@ An expression (`expr`) is one of these:
 * a variable identifier (`IDENT`)
 * a boolean literal (`true` or `false`)
 * the `null` value
-* a function call to `IDENT`
+* a function call
 * a binary operation (`binop`)
 * an `array` literal
 * an array subscript `expr[index]`
