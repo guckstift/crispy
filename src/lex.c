@@ -176,10 +176,19 @@ Token *lex(char *src, char *src_end)
 			token.text = text;
 		}
 		else if(
+			src[0] == '=' && src[1] == '=' || src[0] == '!' && src[1] == '=' ||
+			src[0] == '<' && src[1] == '=' || src[0] == '>' && src[1] == '='
+		) {
+			token.type = TK_PUNCT;
+			token.length = 2;
+			token.punct = src[0] | src[1] << 8;
+			src += 2;
+		}
+		else if(
 			*src == ';' || *src == '=' || *src == '(' || *src == ')' ||
 			*src == '{' || *src == '}' || *src == '+' || *src == '-' ||
 			*src == '[' || *src == ']' || *src == '*' || *src == '%' ||
-			*src == ','
+			*src == '<' || *src == '>' || *src == ','
 		) {
 			token.type = TK_PUNCT;
 			token.length = 1;

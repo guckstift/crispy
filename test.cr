@@ -1,17 +1,7 @@
-function foo()
-{
-	return 0;
-}
+var a = 1;
+var b = 1;
+var c = 2;
 
-function bar()
-{
-	return 1;
-}
-
-var x = foo() + bar();
-var i = 0;
-
-while foo() + bar() - i {
-	print "Hello";
-	i = i + 1;
-:
+print 1 < 2 + 3;
+#print a == b < c;
+print a == b;

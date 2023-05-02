@@ -81,6 +81,35 @@ static void a_subscript(Expr *subscript)
 	a_expr(subscript->index);
 }
 
+static void a_binop(Expr *binop)
+{
+	Expr *left = binop->left;
+	Expr *right = binop->right;
+	
+	a_expr(left);
+	a_expr(right);
+	
+	if(binop->isconst) {
+		Token *op = binop->op;
+		int64_t oplevel = binop->oplevel;
+		
+		binop->value =
+			op->punct == '+' ? left->value + right->value :
+			op->punct == '-' ? left->value - right->value :
+			op->punct == '*' ? left->value * right->value :
+			op->punct == '%' ? left->value % right->value :
+			op->punct == '<' ? left->value < right->value :
+			op->punct == '>' ? left->value > right->value :
+			op->punct == IPUNCT("==") ? left->value == right->value :
+			op->punct == IPUNCT("!=") ? left->value != right->value :
+			op->punct == IPUNCT("<=") ? left->value <= right->value :
+			op->punct == IPUNCT(">=") ? left->value >= right->value :
+			0 /* should never happen */;
+		
+		binop->type = oplevel == OP_CMP ? EX_BOOL : EX_INT;
+	}
+}
+
 static void a_expr(Expr *expr)
 {
 	switch(expr->type) {
@@ -88,8 +117,7 @@ static void a_expr(Expr *expr)
 			a_var(expr);
 			break;
 		case EX_BINOP:
-			a_expr(expr->left);
-			a_expr(expr->right);
+			a_binop(expr);
 			break;
 		case EX_CALL:
 			a_callexpr(expr);

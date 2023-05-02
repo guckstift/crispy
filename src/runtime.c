@@ -22,9 +22,9 @@
 
 #define UNINITIALIZED {.type = TYX_UNINITIALIZED}
 
-#define INT_BINOP(left, op, right) \
+#define BINOP(t, left, op, right) \
 	(Value){ \
-		.type = TY_INT, \
+		.type = t, \
 		.value = check_type( \
 			TY_NULL, TY_INT, (left) \
 		).value op check_type( \

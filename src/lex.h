@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define IPUNCT(s) (s[0] | s[1] << 8)
+
 #define KEYWORDS(f) \
 	f(var) \
 	f(print) \
@@ -40,7 +42,7 @@ typedef struct Token {
 		Keyword keyword;
 		char *text;
 		int64_t value;
-		char punct;
+		int64_t punct;
 	};
 } Token;
 

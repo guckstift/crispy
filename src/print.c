@@ -251,7 +251,7 @@ static void print_expr(Expr *expr)
 			break;
 		case EX_BINOP:
 			print_expr(expr->left);
-			print("%c", expr->op);
+			print(" %T ", expr->op);
 			print_expr(expr->right);
 			break;
 		case EX_CALL:
@@ -264,7 +264,7 @@ static void print_expr(Expr *expr)
 			print_subscript(expr);
 			break;
 		case EX_UNARY:
-			print("%c", expr->op);
+			print("%T ", expr->op);
 			print_expr(expr->subexpr);
 			break;
 	}

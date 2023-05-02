@@ -91,19 +91,21 @@ static Token *eat_keyword(Keyword keyword)
 	return 0;
 }
 
-static Token *eat_punct(char punct)
+static Token *see_punct(char *punct)
 {
-	if(cur->type == TK_PUNCT && cur->punct == punct) {
-		return cur ++;
+	int64_t ipunct = punct[0] | punct[1] << 8;
+	
+	if(cur->type == TK_PUNCT && cur->punct == ipunct) {
+		return cur;
 	}
 	
 	return 0;
 }
 
-static Token *see_punct(char punct)
+static Token *eat_punct(char *punct)
 {
-	if(cur->type == TK_PUNCT && cur->punct == punct) {
-		return cur;
+	if(see_punct(punct)) {
+		return cur ++;
 	}
 	
 	return 0;
@@ -111,7 +113,7 @@ static Token *see_punct(char punct)
 
 static Expr *p_array()
 {
-	Token *start = eat_punct('[');
+	Token *start = eat_punct("[");
 	
 	if(!start) {
 		return 0;
@@ -126,7 +128,7 @@ static Expr *p_array()
 		length = 1;
 		has_side_effects = first->has_side_effects;
 		
-		while(eat_punct(',')) {
+		while(eat_punct(",")) {
 			Expr *item = p_expr();
 			
 			if(!item) {
@@ -140,7 +142,7 @@ static Expr *p_array()
 		}
 	}
 	
-	if(!eat_punct(']')) {
+	if(!eat_punct("]")) {
 		error_after("expected ']' at the end of array literal");
 	}
 	
@@ -221,7 +223,7 @@ static Expr *p_callexpr_x(Expr *callee)
 		Expr *last = first;
 		argcount = 1;
 		
-		while(eat_punct(',')) {
+		while(eat_punct(",")) {
 			Expr *next = p_expr();
 			
 			if(next == 0) {
@@ -234,7 +236,7 @@ static Expr *p_callexpr_x(Expr *callee)
 		}
 	}
 	
-	if(!eat_punct(')')) {
+	if(!eat_punct(")")) {
 		error_after("expected ')' after argument list");
 	}
 	
@@ -260,7 +262,7 @@ static Expr *p_subscript_x(Expr *array)
 		error_after("expected index expression in []");
 	}
 	
-	if(!eat_punct(']')) {
+	if(!eat_punct("]")) {
 		error_after("expected ']' after index");
 	}
 	
@@ -286,11 +288,11 @@ static Expr *p_postfix()
 		return 0;
 	}
 	
-	while(see_punct('(') || see_punct('[')) {
-		if(eat_punct('(')) {
+	while(see_punct("(") || see_punct("[")) {
+		if(eat_punct("(")) {
 			expr = p_callexpr_x(expr);
 		}
-		else if(eat_punct('[')) {
+		else if(eat_punct("[")) {
 			expr = p_subscript_x(expr);
 		}
 	}
@@ -302,8 +304,8 @@ static Expr *p_unary()
 {
 	Token *op = 0;
 	
-	(op = eat_punct('+')) ||
-	(op = eat_punct('-')) ;
+	(op = eat_punct("+")) ||
+	(op = eat_punct("-")) ;
 	
 	if(op == 0) {
 		return p_postfix();
@@ -321,7 +323,7 @@ static Expr *p_unary()
 	expr->has_side_effects = subexpr->has_side_effects;
 	expr->start = op;
 	expr->subexpr = subexpr;
-	expr->op = op->punct;
+	expr->op = op;
 	return expr;
 }
 
@@ -330,13 +332,21 @@ static Token *p_operator(int level)
 	Token *op = 0;
 	
 	switch(level) {
+		case OP_CMP:
+			(op = eat_punct("<")) ||
+			(op = eat_punct(">")) ||
+			(op = eat_punct("==")) ||
+			(op = eat_punct("!=")) ||
+			(op = eat_punct("<=")) ||
+			(op = eat_punct(">=")) ;
+			break;
 		case OP_ADD:
-			(op = eat_punct('+')) ||
-			(op = eat_punct('-')) ;
+			(op = eat_punct("+")) ||
+			(op = eat_punct("-")) ;
 			break;
 		case OP_MUL:
-			(op = eat_punct('*')) ||
-			(op = eat_punct('%')) ;
+			(op = eat_punct("*")) ||
+			(op = eat_punct("%")) ;
 			break;
 	}
 	
@@ -369,34 +379,26 @@ static Expr *p_binop(int level)
 			error_at(at, "strings can not be used with %T", op);
 		}
 		
-		if(left->isconst && right->isconst) {
-			Expr *sum = calloc(1, sizeof(Expr));
-			sum->type = EX_INT;
-			sum->isconst = 1;
-			sum->start = left->start;
-			sum->value =
-				op->punct == '+' ? left->value + right->value :
-				op->punct == '-' ? left->value - right->value :
-				op->punct == '*' ? left->value * right->value :
-				op->punct == '%' ? left->value % right->value :
-				0 /* should never happen */;
-			left = sum;
-		}
-		else {
-			Expr *binop = calloc(1, sizeof(Expr));
-			binop->type = EX_BINOP;
-			binop->isconst = 0;
-			
-			binop->has_side_effects =
-				left->has_side_effects || right->has_side_effects;
-			
-			binop->start = left->start;
-			binop->left = left;
-			binop->right = right;
-			binop->op = op->punct;
-			left = binop;
+		if(
+			level == OP_CMP &&
+			left->type == EX_BINOP && left->oplevel == OP_CMP
+		) {
+			error_at(op, "can not chain comparisons");
 		}
 		
+		Expr *binop = calloc(1, sizeof(Expr));
+		binop->type = EX_BINOP;
+		binop->isconst = left->isconst && right->isconst;
+		
+		binop->has_side_effects =
+			left->has_side_effects || right->has_side_effects;
+		
+		binop->start = left->start;
+		binop->left = left;
+		binop->right = right;
+		binop->op = op;
+		binop->oplevel = level;
+		left = binop;
 	}
 	
 	return left;
@@ -423,7 +425,7 @@ static Stmt *p_vardecl()
 	
 	Expr *init = 0;
 	
-	if(eat_punct('=')) {
+	if(eat_punct("=")) {
 		init = p_expr();
 		
 		if(init == 0) {
@@ -431,7 +433,7 @@ static Stmt *p_vardecl()
 		}
 	}
 	
-	if(!eat_punct(';')) {
+	if(!eat_punct(";")) {
 		error_after("expected ';' after variable declaration");
 	}
 	
@@ -456,7 +458,7 @@ static Stmt *p_vardecl()
 
 static Stmt *p_call_x(Expr *call)
 {
-	if(!eat_punct(';')) {
+	if(!eat_punct(";")) {
 		error_after("expected ';' after function call");
 	}
 	
@@ -477,7 +479,7 @@ static Stmt *p_assign_x(Expr *target)
 		error_after("expected right side of assignment");
 	}
 	
-	if(!eat_punct(';')) {
+	if(!eat_punct(";")) {
 		error_after("expected ';' after assignment");
 	}
 	
@@ -503,7 +505,7 @@ static Stmt *p_assign_or_call()
 		return p_call_x(expr);
 	}
 	
-	if(eat_punct('=')) {
+	if(eat_punct("=")) {
 		if(expr->islvalue == 0) {
 			error_at(expr->start, "target is not assignable");
 		}
@@ -530,7 +532,7 @@ static Stmt *p_print()
 	
 	Expr *last = first;
 	
-	while(eat_punct(',')) {
+	while(eat_punct(",")) {
 		Expr *next = p_expr();
 		
 		if(next == 0) {
@@ -541,7 +543,7 @@ static Stmt *p_print()
 		last = next;
 	}
 	
-	if(!eat_punct(';')) {
+	if(!eat_punct(";")) {
 		error_after("expected ';' after print statement");
 	}
 	
@@ -570,7 +572,7 @@ static Stmt *p_funcdecl()
 		error("expected function identifier");
 	}
 	
-	if(!eat_punct('(')) {
+	if(!eat_punct("(")) {
 		error_after("expected '(' after function name");
 	}
 	
@@ -585,7 +587,7 @@ static Stmt *p_funcdecl()
 		params->last_item = item;
 		params->length = 1;
 		
-		while(eat_punct(',')) {
+		while(eat_punct(",")) {
 			Token *param = eat_token(TK_IDENT);
 			
 			if(param == 0) {
@@ -601,17 +603,17 @@ static Stmt *p_funcdecl()
 		}
 	}
 	
-	if(!eat_punct(')')) {
+	if(!eat_punct(")")) {
 		error_after("expected ')'");
 	}
 	
-	if(!eat_punct('{')) {
+	if(!eat_punct("{")) {
 		error_after("expected '{'");
 	}
 	
 	Block *body = p_block(params);
 	
-	if(!eat_punct('}')) {
+	if(!eat_punct("}")) {
 		error("expected '}' or another statement");
 	}
 	
@@ -650,7 +652,7 @@ static Stmt *p_return()
 	
 	Expr *value = p_expr();
 	
-	if(!eat_punct(';')) {
+	if(!eat_punct(";")) {
 		error_after("expected ';' after return statement");
 	}
 	
@@ -677,26 +679,26 @@ static Stmt *p_if()
 		error("expected a condition expression");
 	}
 	
-	if(!eat_punct('{')) {
+	if(!eat_punct("{")) {
 		error("expected '{'");
 	}
 	
 	Block *body = p_block(0);
 	
-	if(!eat_punct('}')) {
+	if(!eat_punct("}")) {
 		error("expected '}' or another statement");
 	}
 		
 	Block *else_body = 0;
 	
 	if(eat_keyword(KW_else)) {
-		if(!eat_punct('{')) {
+		if(!eat_punct("{")) {
 			error("expected '{'");
 		}
 		
 		else_body = p_block(0);
 		
-		if(!eat_punct('}')) {
+		if(!eat_punct("}")) {
 			error("expected '}' or another statement");
 		}
 	}
@@ -727,13 +729,13 @@ static Stmt *p_while()
 		error("expected a condition expression");
 	}
 	
-	if(!eat_punct('{')) {
+	if(!eat_punct("{")) {
 		error("expected '{'");
 	}
 	
 	Block *body = p_block(0);
 	
-	if(!eat_punct('}')) {
+	if(!eat_punct("}")) {
 		error("expected '}' or another statement");
 	}
 	

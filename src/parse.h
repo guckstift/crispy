@@ -18,6 +18,7 @@ typedef enum {
 } ExprType;
 
 typedef enum {
+	OP_CMP,
 	OP_ADD,
 	OP_MUL,
 	_OPLEVEL_COUNT,
@@ -51,12 +52,13 @@ typedef struct Expr {
 	};
 	
 	union {
-		char op; // binop, unary
+		Token *op; // binop, unary
 		struct Expr *args; // call
 	};
 	
 	union {
 		int64_t argcount; // call
+		OpLevel oplevel; // binop
 	};
 } Expr;
 

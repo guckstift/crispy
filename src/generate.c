@@ -29,7 +29,8 @@ static void write(char *msg, ...)
 				fprintf(file, "%s", va_arg(args, char*));
 			}
 			else if(*msg == 'T') {
-				fprintf(file, "%s", va_arg(args, Token*)->text);
+				Token *token = va_arg(args, Token*);
+				fwrite(token->start, 1, token->length, file);
 			}
 			else if(*msg == 'F') {
 				Stmt *func = va_arg(args, Stmt*);
@@ -148,6 +149,16 @@ static void g_const_init_expr(Expr *expr)
 	}
 }
 
+static void g_binop(Expr *expr)
+{
+	if(expr->oplevel == OP_CMP) {
+		write("BINOP(TY_BOOL, %E, %T, %E)", expr->left, expr->op, expr->right);
+	}
+	else {
+		write("BINOP(TY_INT, %E, %T, %E)", expr->left, expr->op, expr->right);
+	}
+}
+
 static void g_expr(Expr *expr)
 {
 	switch(expr->type) {
@@ -167,7 +178,7 @@ static void g_expr(Expr *expr)
 			g_var(expr);
 			break;
 		case EX_BINOP:
-			write("INT_BINOP(%E, %c, %E)", expr->left, expr->op, expr->right);
+			g_binop(expr);
 			break;
 		case EX_CALL:
 			g_tmpvar(expr);
@@ -179,7 +190,7 @@ static void g_expr(Expr *expr)
 			write("*subscript(%E, %E)", expr->array, expr->index);
 			break;
 		case EX_UNARY:
-			write("INT_UNARY(%c, %E)", expr->op, expr->subexpr);
+			write("INT_UNARY(%T, %E)", expr->op, expr->subexpr);
 			break;
 	}
 }
