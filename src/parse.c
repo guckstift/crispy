@@ -19,10 +19,19 @@ static void error(char *msg, ...)
 {
 	va_list args;
 	va_start(args, msg);
+	vprint_error(cur->line, cur->linep, cur->start, msg, args);
+	exit(EXIT_FAILURE);
+}
+
+static void error_after(char *msg, ...)
+{
+	Token *last = cur - 1;
+	va_list args;
+	va_start(args, msg);
 	
-	fprintf(stderr, P_BOLDRED "error(%li): " P_RESET, cur->line);
-	vfprintf(stderr, msg, args);
-	fprintf(stderr, "\n");
+	vprint_error(
+		last->line, last->linep, last->start + last->length, msg, args
+	);
 	
 	exit(EXIT_FAILURE);
 }
@@ -128,7 +137,7 @@ static Expr *p_array()
 			Expr *item = p_expr();
 			
 			if(!item) {
-				error("expected another array item after ','");
+				error_after("expected another array item after ','");
 			}
 			
 			has_side_effects = has_side_effects || item->has_side_effects;
@@ -139,7 +148,7 @@ static Expr *p_array()
 	}
 	
 	if(!eat_punct(']')) {
-		error("expected ']' at the end of array literal");
+		error_after("expected ']' at the end of array literal");
 	}
 	
 	Expr *expr = calloc(1, sizeof(Expr));
@@ -223,7 +232,7 @@ static Expr *p_callexpr_x(Expr *callee)
 			Expr *next = p_expr();
 			
 			if(next == 0) {
-				error("expected another argument after ','");
+				error_after("expected another argument after ','");
 			}
 			
 			last->next = next;
@@ -233,7 +242,7 @@ static Expr *p_callexpr_x(Expr *callee)
 	}
 	
 	if(!eat_punct(')')) {
-		error("expected ')' after argument list");
+		error_after("expected ')' after argument list");
 	}
 	
 	Expr *expr = calloc(1, sizeof(Expr));
@@ -259,7 +268,7 @@ static Expr *p_subscript_x(Expr *array)
 	}
 	
 	if(!eat_punct(']')) {
-		error("expected ']' after index");
+		error_after("expected ']' after index");
 	}
 	
 	Expr *expr = calloc(1, sizeof(Expr));
@@ -310,7 +319,7 @@ static Expr *p_unary()
 	Expr *subexpr = p_unary();
 	
 	if(subexpr == 0) {
-		error("expected expression after unary %c", op->punct);
+		error_after("expected expression after unary %c", op->punct);
 	}
 	
 	Expr *expr = calloc(1, sizeof(Expr));
@@ -359,7 +368,7 @@ static Expr *p_binop(int level)
 		Expr *right = p_binop(level + 1);
 		
 		if(!right) {
-			error("expected right side of %c", op->punct);
+			error_after("expected right side of %c", op->punct);
 		}
 		
 		if(left->type == EX_STRING || right->type == EX_STRING) {
@@ -424,12 +433,12 @@ static Stmt *p_vardecl()
 		init = p_expr();
 		
 		if(init == 0) {
-			error("expected initializer after '='");
+			error_after("expected initializer after '='");
 		}
 	}
 	
 	if(!eat_punct(';')) {
-		error("expected ';' after variable declaration");
+		error_after("expected ';' after variable declaration");
 	}
 	
 	Stmt *stmt = calloc(1, sizeof(Stmt));
@@ -454,7 +463,7 @@ static Stmt *p_vardecl()
 static Stmt *p_call_x(Expr *call)
 {
 	if(!eat_punct(';')) {
-		error("expected ';' after function call");
+		error_after("expected ';' after function call");
 	}
 	
 	Stmt *stmt = calloc(1, sizeof(Stmt));
@@ -471,11 +480,11 @@ static Stmt *p_assign_x(Expr *target)
 	Expr *value = p_expr();
 	
 	if(value == 0) {
-		error("expected right side of assignment");
+		error_after("expected right side of assignment");
 	}
 	
 	if(!eat_punct(';')) {
-		error("expected ';' after assignment");
+		error_after("expected ';' after assignment");
 	}
 	
 	Stmt *stmt = calloc(1, sizeof(Stmt));
@@ -508,7 +517,7 @@ static Stmt *p_assign_or_call()
 		return p_assign_x(expr);
 	}
 	
-	error("expected '=' or '('");
+	error_after("expected '=' or '('");
 }
 
 static Stmt *p_print()
@@ -522,7 +531,7 @@ static Stmt *p_print()
 	Expr *first = p_expr();
 	
 	if(first == 0) {
-		error("expected value to print");
+		error_after("expected value to print");
 	}
 	
 	Expr *last = first;
@@ -531,7 +540,7 @@ static Stmt *p_print()
 		Expr *next = p_expr();
 		
 		if(next == 0) {
-			error("expected another value after ',' to print");
+			error_after("expected another value after ',' to print");
 		}
 		
 		last->next = next;
@@ -539,7 +548,7 @@ static Stmt *p_print()
 	}
 	
 	if(!eat_punct(';')) {
-		error("expected ';' after print statement");
+		error_after("expected ';' after print statement");
 	}
 	
 	Stmt *stmt = calloc(1, sizeof(Stmt));
@@ -568,7 +577,7 @@ static Stmt *p_funcdecl()
 	}
 	
 	if(!eat_punct('(')) {
-		error("expected '(' after function name");
+		error_after("expected '(' after function name");
 	}
 	
 	TokenList *params = calloc(1, sizeof(TokenList));
@@ -586,7 +595,7 @@ static Stmt *p_funcdecl()
 			Token *param = eat_token(TK_IDENT);
 			
 			if(param == 0) {
-				error("expected another parameter after ','");
+				error_after("expected another parameter after ','");
 			}
 			
 			TokenItem *item = calloc(1, sizeof(TokenItem));
@@ -599,11 +608,11 @@ static Stmt *p_funcdecl()
 	}
 	
 	if(!eat_punct(')')) {
-		error("expected ')'");
+		error_after("expected ')'");
 	}
 	
 	if(!eat_punct('{')) {
-		error("expected '{'");
+		error_after("expected '{'");
 	}
 	
 	Block *body = p_block(params);
@@ -648,7 +657,7 @@ static Stmt *p_return()
 	Expr *value = p_expr();
 	
 	if(!eat_punct(';')) {
-		error("expected ';' after return statement");
+		error_after("expected ';' after return statement");
 	}
 	
 	Stmt *stmt = calloc(1, sizeof(Stmt));

@@ -42,7 +42,7 @@ Token *lex(char *src, char *src_end)
 			while(src <= src_end) {
 				if(*src == '\n') {
 					line ++;
-					linep = src;
+					linep = src + 1;
 				}
 				else if(src[0] == '*' && src[1] == '/') {
 					src += 2;
@@ -60,7 +60,7 @@ Token *lex(char *src, char *src_end)
 		else if(isspace(*src)) {
 			if(*src == '\n') {
 				line ++;
-				linep = src;
+				linep = src + 1;
 			}
 			
 			src ++;

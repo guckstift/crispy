@@ -78,12 +78,59 @@ void print(char *msg, ...)
 	va_end(args);
 }
 
-void eprint(char *msg, ...)
+static int64_t dec_len(int64_t val)
 {
-	va_list args;
-	va_start(args, msg);
+	int64_t count = 1;
+	
+	while(val >= 10) {
+		val /= 10;
+		count ++;
+	}
+	
+	return count;
+}
+
+static void print_error_src_line(int64_t line, char *linep, char *errpos)
+{
+	int64_t col = 0;
+	int64_t errcol = 0;
+	
+	fprint(stderr, P_COL_LINENO "%i: " P_RESET, line);
+	
+	for(char *p = linep; *p && *p != '\n'; p ++) {
+		if(*p == '\t') {
+			do {
+				fprint(stderr, " ");
+				col ++;
+			} while(col % 4 != 0);
+		}
+		else {
+			fprint(stderr, "%c", *p);
+			col ++;
+		}
+		
+		if(p+1 == errpos) {
+			errcol = col;
+		}
+	}
+	
+	fprint(stderr, "\n");
+	errcol += dec_len(line) + 2;
+	
+	for(int64_t i=0; i < errcol; i++) {
+		fprint(stderr, " ");
+	}
+	
+	fprint(stderr, P_COL_ERROR "^" P_RESET "\n");
+}
+
+void vprint_error(
+	int64_t line, char *linep, char *errpos, char *msg, va_list args
+) {
+	fprint(stderr, P_ERROR "error: " P_RESET);
 	vfprint(stderr, msg, args);
-	va_end(args);
+	fprint(stderr, "\n");
+	print_error_src_line(line, linep, errpos);
 }
 
 void print_token(Token *token)

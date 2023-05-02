@@ -1,9 +1,2 @@
-var foovar = "\tHello World";
-print 78;
-
-function okay(P_COL_IDENT)
-{
-	return null;
-}
-
-okay = foovar;
+print [2123
+var foo = 90;
