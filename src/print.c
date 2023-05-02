@@ -1,4 +1,5 @@
 #include <inttypes.h>
+#include <stdlib.h>
 #include "print.h"
 
 static void print_block(Block *block);
@@ -131,6 +132,25 @@ void vprint_error(
 	vfprint(stderr, msg, args);
 	fprint(stderr, "\n");
 	print_error_src_line(line, linep, errpos);
+}
+
+void verror_at(Token *at, char *msg, va_list args)
+{
+	vprint_error(at->line, at->linep, at->start, msg, args);
+	exit(EXIT_FAILURE);
+}
+
+void error_at(Token *at, char *msg, ...)
+{
+	va_list args;
+	va_start(args, msg);
+	verror_at(at, msg, args);
+}
+
+void verror_after_t(Token *t, char *msg, va_list args)
+{
+	vprint_error(t->line, t->linep, t->start + t->length, msg, args);
+	exit(EXIT_FAILURE);
 }
 
 void print_token(Token *token)

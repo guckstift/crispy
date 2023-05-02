@@ -1,2 +1,9 @@
-print [2123
-var foo = 90;
+var x = 10;
+
+function x(aa, aa)
+{
+}
+
+var x;
+
+return ;

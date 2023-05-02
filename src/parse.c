@@ -19,21 +19,14 @@ static void error(char *msg, ...)
 {
 	va_list args;
 	va_start(args, msg);
-	vprint_error(cur->line, cur->linep, cur->start, msg, args);
-	exit(EXIT_FAILURE);
+	verror_at(cur, msg, args);
 }
 
 static void error_after(char *msg, ...)
 {
-	Token *last = cur - 1;
 	va_list args;
 	va_start(args, msg);
-	
-	vprint_error(
-		last->line, last->linep, last->start + last->length, msg, args
-	);
-	
-	exit(EXIT_FAILURE);
+	verror_after_t(cur - 1, msg, args);
 }
 
 static Stmt *lookup_flat(Token *ident, Scope *scope)
@@ -264,7 +257,7 @@ static Expr *p_subscript_x(Expr *array)
 	Expr *index = p_expr();
 	
 	if(!index) {
-		error("expected index expression in []");
+		error_after("expected index expression in []");
 	}
 	
 	if(!eat_punct(']')) {
@@ -319,7 +312,7 @@ static Expr *p_unary()
 	Expr *subexpr = p_unary();
 	
 	if(subexpr == 0) {
-		error_after("expected expression after unary %c", op->punct);
+		error_after("expected expression after unary %T", op);
 	}
 	
 	Expr *expr = calloc(1, sizeof(Expr));
@@ -368,11 +361,12 @@ static Expr *p_binop(int level)
 		Expr *right = p_binop(level + 1);
 		
 		if(!right) {
-			error_after("expected right side of %c", op->punct);
+			error_after("expected right side of %T", op);
 		}
 		
 		if(left->type == EX_STRING || right->type == EX_STRING) {
-			error("strings can not be used with %c", op->punct);
+			Token *at = left->type == EX_STRING ? left->start : right->start;
+			error_at(at, "strings can not be used with %T", op);
 		}
 		
 		if(left->isconst && right->isconst) {
@@ -424,7 +418,7 @@ static Stmt *p_vardecl()
 	Token *ident = eat_token(TK_IDENT);
 	
 	if(ident == 0) {
-		error("expected identifier");
+		error("expected identifier to declare");
 	}
 	
 	Expr *init = 0;
@@ -454,7 +448,7 @@ static Stmt *p_vardecl()
 	}
 	
 	if(!declare(stmt)) {
-		error("name %s already declared", ident->text);
+		error_at(ident, "name %T already declared", ident);
 	}
 	
 	return stmt;
@@ -511,7 +505,7 @@ static Stmt *p_assign_or_call()
 	
 	if(eat_punct('=')) {
 		if(expr->islvalue == 0) {
-			error("target is not assignable");
+			error_at(expr->start, "target is not assignable");
 		}
 		
 		return p_assign_x(expr);
@@ -573,7 +567,7 @@ static Stmt *p_funcdecl()
 	next_func_id ++;
 	
 	if(ident == 0) {
-		error("expected identifier");
+		error("expected function identifier");
 	}
 	
 	if(!eat_punct('(')) {
@@ -636,7 +630,7 @@ static Stmt *p_funcdecl()
 	}
 	
 	if(!declare(stmt)) {
-		error("name %s already declared", ident->text);
+		error_at(ident, "name %T already declared", ident);
 	}
 	
 	return stmt;
@@ -651,7 +645,7 @@ static Stmt *p_return()
 	}
 	
 	if(!cur_scope->parent) {
-		error("return can only be used inside a function");
+		error_at(start, "return can only be used inside a function");
 	}
 	
 	Expr *value = p_expr();
@@ -812,7 +806,9 @@ static Block *p_block(TokenList *params)
 			stmt->is_param = 1;
 			
 			if(!declare(stmt)) {
-				error("name %s already declared", item->token->text);
+				error_at(
+					item->token, "parameter %T already declared", item->token
+				);
 			}
 		}
 	}
