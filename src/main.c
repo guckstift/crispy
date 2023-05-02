@@ -8,7 +8,7 @@
 
 static void error(char *msg)
 {
-	fprintf(stderr, "error: %s\n", msg);
+	fprintf(stderr, P_ERROR "error:" P_RESET " %s\n", msg);
 	exit(EXIT_FAILURE);
 }
 
