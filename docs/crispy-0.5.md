@@ -114,6 +114,8 @@ A statement (`stmt`) is one of these:
 * function declaration (`funcdecl`)
 * function `call`
 * `return` statement
+* `if` statement
+* `while` statement
 
 A variable declaration introduces a new variable `IDENT` and optionally assigns
 an initial value `expr` to it. The same variable `x` is not allowed to be
@@ -140,6 +142,10 @@ can be declared in the top level scope or another functions scope. When
 declared inside another function it can not access the local variables of the
 outer function, only top level variables.
 
+After the functions name a comma-separated list of parameters (`params`) might
+be declared inside `(` and `)`. These are declared inside the local scope of
+the function like its local variables.
+
 A function `IDENT` is basically just a variable pointing to a function object.
 Therefore it could be reassigned to a different value or it could be passed to
 another variable or array item.
@@ -158,6 +164,11 @@ A `return` statement can only be used inside a function body. It terminates the
 function and optionally lets the it return a value `expr`. If the return value
 is omitted the return value is implicitly `null`.
 
+The `if` and `while` statements work just like you know them from other
+languages. They both expect an expression that is tested for truthiness to
+continue execute. `if` can have an optional `else` part but there is no
+`else if` or `elif` syntax.
+
 ### Expression
 
 An expression (`expr`) is one of these:
@@ -175,14 +186,24 @@ An expression (`expr`) is one of these:
 * an `array` literal
 * an array subscript `expr[index]`
 
-A binary operation combines two or more values with operators. Operators are
-`+` which adds values, `-` which subtracts the right value from the left one,
-`*` which multiplies values or `%` which computes the modulus.
+A binary operation combines two or more values with operators.
 
-The results are integers. The single operands can be integers, booleans or even
-`null`. `null` is interpreted as `0`, `true` as `1` and `false` as `0`. The
-binary expression is evaluated from left to right and the operators are all
-left-associative. The operators `*` and `%` have precedence over `+` and `-`.
+| precedence | description | operators |
+| --- | --- | --- |
+| 1 | multiplication, modulo | `*` `%` |
+| 2 | addition, subtraction | `+` `-` |
+| 3 | comparison | `==` `!=` `<=` `>=` `<` `>` |
+
+Operators `+`, `-`, `*` and `%` result in integer values. Comparison operators
+result in booleans.
+
+Comparison operations can not be chained: e.g.: `a < b == c` is not allowed.
+
+All operators have left-to-right associativity and are also evaluated from left
+to right.
+
+All operands can be an integers, booleans or even `null`. `null` is interpreted
+as `0`, `true` as `1` and `false` as `0`.
 
 A call expression is just like a call statement but evaluated to its return
 value.
