@@ -1,9 +1,17 @@
-var x = 10;
-
-function x(aa, aa)
+function foo()
 {
+	return 0;
 }
 
-var x;
+function bar()
+{
+	return 1;
+}
 
-return ;
+var x = foo() + bar();
+var i = 0;
+
+while foo() + bar() - i {
+	print "Hello";
+	i = i + 1;
+}

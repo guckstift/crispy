@@ -37,7 +37,10 @@ static void write(char *msg, ...)
 			}
 			else if(*msg == 'V') {
 				Stmt *vardecl = va_arg(args, Stmt*);
-				write("scope%i.m_%T", vardecl->scope->scope_id, vardecl->ident);
+				
+				write(
+					"scope%i.m_%T", vardecl->scope->scope_id, vardecl->ident
+				);
 			}
 			else if(*msg == 'E') {
 				g_expr(va_arg(args, Expr*));
@@ -228,19 +231,19 @@ static void g_scope(Scope *scope)
 	}
 }
 
-static void g_tmp_assigns(Expr *expr)
+static void g_tmp_assigns(Expr *expr, bool reassign)
 {
 	if(!expr->has_side_effects) {
 		return;
 	}
 	
 	if(expr->type == EX_BINOP) {
-		g_tmp_assigns(expr->left);
-		g_tmp_assigns(expr->right);
+		g_tmp_assigns(expr->left, reassign);
+		g_tmp_assigns(expr->right, reassign);
 	}
 	else if(expr->type == EX_CALL) {
-		g_tmp_assigns(expr->callee);
-		write("%>Value ");
+		g_tmp_assigns(expr->callee, reassign);
+		write("%>%s", !reassign ? "Value " : "");
 		g_tmpvar(expr);
 		write(" = ");
 		g_call(expr);
@@ -248,12 +251,12 @@ static void g_tmp_assigns(Expr *expr)
 	}
 	else if(expr->type == EX_ARRAY) {
 		for(Expr *item = expr->items; item; item = item->next) {
-			g_tmp_assigns(item);
+			g_tmp_assigns(item, reassign);
 		}
 	}
 	else if(expr->type == EX_SUBSCRIPT) {
-		g_tmp_assigns(expr->array);
-		g_tmp_assigns(expr->index);
+		g_tmp_assigns(expr->array, reassign);
+		g_tmp_assigns(expr->index, reassign);
 	}
 }
 
@@ -266,7 +269,7 @@ static void g_vardecl(Stmt *decl)
 			init = &(Expr){.type = EX_NULL};
 		}
 		
-		g_tmp_assigns(init);
+		g_tmp_assigns(init, false);
 		write("%>%V = %E;\n", decl, init);
 	}
 }
@@ -278,7 +281,7 @@ static void g_print(Stmt *print)
 			write("%>printf(\" \");\n");
 		}
 		
-		g_tmp_assigns(value);
+		g_tmp_assigns(value, false);
 		write("%>print(%E);\n", value);
 	}
 	
@@ -302,7 +305,7 @@ static void g_return(Stmt *stmt)
 	}
 	
 	if(stmt->value) {
-		g_tmp_assigns(stmt->value);
+		g_tmp_assigns(stmt->value, false);
 	}
 	
 	if(stmt->value) {
@@ -315,6 +318,7 @@ static void g_return(Stmt *stmt)
 
 static void g_if(Stmt *ifstmt)
 {
+	g_tmp_assigns(ifstmt->cond, false);
 	write("%>if(%E.value) {\n", ifstmt->cond);
 	g_block(ifstmt->body);
 	write("%>}\n");
@@ -333,8 +337,8 @@ static void g_stmt(Stmt *stmt)
 			g_vardecl(stmt);
 			break;
 		case ST_ASSIGN:
-			g_tmp_assigns(stmt->target);
-			g_tmp_assigns(stmt->value);
+			g_tmp_assigns(stmt->target, false);
+			g_tmp_assigns(stmt->value, false);
 			write("%>%E = %E;\n", stmt->target, stmt->value);
 			break;
 		case ST_PRINT:
@@ -344,7 +348,7 @@ static void g_stmt(Stmt *stmt)
 			g_funcdecl(stmt);
 			break;
 		case ST_CALL:
-			g_tmp_assigns(stmt->call->callee);
+			g_tmp_assigns(stmt->call->callee, false);
 			write("%>");
 			g_call(stmt->call);
 			write(";\n");
@@ -356,8 +360,12 @@ static void g_stmt(Stmt *stmt)
 			g_if(stmt);
 			break;
 		case ST_WHILE:
+			g_tmp_assigns(stmt->cond, false);
 			write("%>while(%E.value) {\n", stmt->cond);
 			g_block(stmt->body);
+			level ++;
+			g_tmp_assigns(stmt->cond, true);
+			level --;
 			write("%>}\n");
 			break;
 	}
