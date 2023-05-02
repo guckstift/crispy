@@ -1,4 +1,9 @@
-var x = "\t\"Hello\"\nWorld";
+var foovar = "\tHello World";
+print 78;
 
-print x;
-print[x];
+function okay(P_COL_IDENT)
+{
+	return null;
+}
+
+okay = foovar;

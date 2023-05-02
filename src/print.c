@@ -1,5 +1,4 @@
-#include <stdio.h>
-#include <stdarg.h>
+#include <inttypes.h>
 #include "print.h"
 
 static void print_block(Block *block);
@@ -8,12 +7,82 @@ static void print_expr(Expr *expr);
 static int level = 0;
 static FILE *outfile = 0;
 
-static void write(char *msg, ...)
+void vfprint(FILE *fs, char *msg, va_list args)
 {
-	if(outfile == 0) outfile = stdout;
+	while(*msg) {
+		if(*msg != '%') {
+			fputc(*msg, fs);
+		}
+		else {
+			msg ++;
+			
+			if(*msg == 'i') {
+				fprintf(fs, "%" PRId64, va_arg(args, int64_t));
+			}
+			else if(*msg == 'c') {
+				fputc(va_arg(args, int), fs);
+			}
+			else if(*msg == 's') {
+				fprintf(fs, "%s", va_arg(args, char*));
+			}
+			else if(*msg == 'p') {
+				fprintf(fs, "%p", va_arg(args, void*));
+			}
+			else if(*msg == 't') {
+				Token *token = va_arg(args, Token*);
+				fwrite(token->start, 1, token->length, fs);
+			}
+			else if(*msg == 'K') {
+				fprint(fs, P_COL_KEYWORD "%s" P_RESET, va_arg(args, char*));
+			}
+			else if(*msg == 'I') {
+				fprint(fs, P_COL_LITERAL "%i" P_RESET, va_arg(args, int64_t));
+			}
+			else if(*msg == 'T') {
+				Token *token = va_arg(args, Token*);
+				
+				if(token->type == TK_KEYWORD) {
+					fprint(fs, P_COL_KEYWORD "%t" P_RESET, token);
+				}
+				else if(token->type == TK_IDENT) {
+					fprint(fs, P_COL_IDENT "%t" P_RESET, token);
+				}
+				else if(token->type == TK_INT || token->type == TK_STRING) {
+					fprint(fs, P_COL_LITERAL "%t" P_RESET, token);
+				}
+				else {
+					fprint(fs, "%t", token);
+				}
+			}
+		}
+		
+		msg ++;
+	}
+	
+	vfprintf(fs, msg, args);
+}
+
+void fprint(FILE *fs, char *msg, ...)
+{
 	va_list args;
 	va_start(args, msg);
-	vfprintf(outfile, msg, args);
+	vfprint(fs, msg, args);
+	va_end(args);
+}
+
+void print(char *msg, ...)
+{
+	va_list args;
+	va_start(args, msg);
+	vfprint(stdout, msg, args);
+	va_end(args);
+}
+
+void eprint(char *msg, ...)
+{
+	va_list args;
+	va_start(args, msg);
+	vfprint(stderr, msg, args);
 	va_end(args);
 }
 
@@ -21,98 +90,101 @@ void print_token(Token *token)
 {
 	switch(token->type) {
 		case TK_KEYWORD:
-			write("%i: KEYWORD: %s", token->line, keywords[token->keyword]);
+			print("KEYWORD");
 			break;
 		case TK_IDENT:
-			write("%i: IDENT: %s", token->line, token->text);
+			print("IDENT");
 			break;
 		case TK_INT:
-			write("%i: INT: %li", token->line, token->value);
+			print("INT");
 			break;
 		case TK_STRING:
-			write("%i: STRING: \"%s\"", token->line, token->text);
+			print("STRING");
 			break;
 		case TK_PUNCT:
-			write("%i: PUNCT: %c", token->line, token->punct);
+			print("PUNCT");
 			break;
 	}
+	
+	print(": %T", token);
 }
 
 void print_tokens(Token *tokens)
 {
 	for(Token *token = tokens; token->type != TK_EOF; token ++) {
+		print("%i: ", token->line);
 		print_token(token);
-		write("\n");
+		print("\n");
 	}
 }
 
 static void print_indent()
 {
 	for(int i=0; i < level; i++) {
-		write("\t");
+		print("\t");
 	}
 }
 
 static void print_callexpr(Expr *call)
 {
 	print_expr(call->callee);
-	write("(");
+	print("(");
 	
 	for(Expr *arg = call->args; arg; arg = arg->next) {
 		if(arg != call->args) {
-			write(", ");
+			print(", ");
 		}
 		
 		print_expr(arg);
 	}
 	
-	write(")");
+	print(")");
 }
 
 static void print_array(Expr *array)
 {
-	write("[");
+	print("[");
 	
 	for(Expr *item = array->items; item; item = item->next) {
 		if(item != array->items) {
-			write(", ");
+			print(", ");
 		}
 		
 		print_expr(item);
 	}
 	
-	write("]");
+	print("]");
 }
 
 static void print_subscript(Expr *subscript)
 {
 	print_expr(subscript->array);
-	write("[");
+	print("[");
 	print_expr(subscript->index);
-	write("]");
+	print("]");
 }
 
 static void print_expr(Expr *expr)
 {
 	switch(expr->type) {
 		case EX_NULL:
-			write("null");
+			print("%K", "null");
 			break;
 		case EX_BOOL:
-			write("%s", expr->value ? "true" : "false");
+			print("%K", expr->value ? "true" : "false");
 			break;
 		case EX_INT:
-			write("%li", expr->value);
+			print("%I", expr->value);
 			break;
 		case EX_STRING:
-			write("\"%s\"", expr->string);
+			print("%T", expr->start);
 			break;
 		case EX_VAR:
-			write("%s", expr->ident->text);
+			print("%T", expr->ident);
 			break;
 		case EX_BINOP:
 			print_expr(expr->left);
-			write("%c", expr->op);
+			print("%c", expr->op);
 			print_expr(expr->right);
 			break;
 		case EX_CALL:
@@ -125,7 +197,7 @@ static void print_expr(Expr *expr)
 			print_subscript(expr);
 			break;
 		case EX_UNARY:
-			write("%c", expr->op);
+			print("%c", expr->op);
 			print_expr(expr->subexpr);
 			break;
 	}
@@ -139,11 +211,10 @@ void fprint_expr(FILE *fs, Expr *expr)
 
 static void print_vardecl(Stmt *vardecl)
 {
-	write("var ");
-	write("%s", vardecl->ident->text);
+	print("%K %T", "var", vardecl->ident);
 	
 	if(vardecl->init) {
-		write(" = ");
+		print(" = ");
 		print_expr(vardecl->init);
 	}
 }
@@ -151,17 +222,17 @@ static void print_vardecl(Stmt *vardecl)
 static void print_assign(Stmt *assign)
 {
 	print_expr(assign->target);
-	write(" = ");
+	print(" = ");
 	print_expr(assign->value);
 }
 
-static void print_print(Stmt *print)
+static void print_print(Stmt *stmt)
 {
-	write("print ");
+	print("%K ", "print");
 	
-	for(Expr *value = print->values; value; value = value->next) {
-		if(value != print->values) {
-			write(", ");
+	for(Expr *value = stmt->values; value; value = value->next) {
+		if(value != stmt->values) {
+			print(", ");
 		}
 		
 		print_expr(value);
@@ -170,25 +241,23 @@ static void print_print(Stmt *print)
 
 static void print_funcdecl(Stmt *funcdecl)
 {
-	write("function ");
-	write("%s", funcdecl->ident->text);
-	write("(");
+	print("%K %T(", "function", funcdecl->ident);
 	TokenList *params = funcdecl->params;
 	
 	for(TokenItem *item = params->first_item; item; item = item->next) {
 		if(item != params->first_item) {
-			write(", ");
+			print(", ");
 		}
 		
-		write("%s", item->token->text);
+		print("%T", item->token);
 	}
 	
-	write(") {\n");
+	print(") {\n");
 	level++;
 	print_block(funcdecl->body);
 	level--;
 	print_indent();
-	write("}");
+	print("}");
 }
 
 static void print_call(Stmt *call)
@@ -198,7 +267,7 @@ static void print_call(Stmt *call)
 
 static void print_return(Stmt *returnstmt)
 {
-	write("return ");
+	print("%K ", "return");
 	
 	if(returnstmt->value) {
 		print_expr(returnstmt->value);
@@ -207,37 +276,37 @@ static void print_return(Stmt *returnstmt)
 
 static void print_if(Stmt *ifstmt)
 {
-	write("if ");
+	print("%K ", "if");
 	print_expr(ifstmt->cond);
-	write(" {\n");
+	print(" {\n");
 	level++;
 	print_block(ifstmt->body);
 	level--;
 	print_indent();
-	write("}");
+	print("}");
 	
 	if(ifstmt->else_body) {
-		write("\n");
+		print("\n");
 		print_indent();
-		write("else {\n");
+		print("%K {\n", "else");
 		level++;
 		print_block(ifstmt->else_body);
 		level--;
 		print_indent();
-		write("}");
+		print("}");
 	}
 }
 
 static void print_while(Stmt *stmt)
 {
-	write("while ");
+	print("%K ", "while");
 	print_expr(stmt->cond);
-	write(" {\n");
+	print(" {\n");
 	level++;
 	print_block(stmt->body);
 	level--;
 	print_indent();
-	write("}");
+	print("}");
 }
 
 static void print_stmt(Stmt *stmt)
@@ -273,13 +342,13 @@ static void print_stmt(Stmt *stmt)
 void print_scope(Scope *scope)
 {
 	outfile = stdout;
-	write("# scope(funchost:%p) %p: ", scope->hosting_func, (void*)scope);
+	print("# scope(funchost:%p) %p: ", scope->hosting_func, scope);
 	
 	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
-		write("%s ", decl->ident->text);
+		print("%s ", decl->ident->text);
 	}
 	
-	write("\n");
+	print("\n");
 }
 
 static void print_block(Block *block)
@@ -290,7 +359,7 @@ static void print_block(Block *block)
 	for(Stmt *stmt = block->stmts; stmt; stmt = stmt->next) {
 		print_indent();
 		print_stmt(stmt);
-		write("\n");
+		print("\n");
 	}
 }
 

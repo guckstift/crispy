@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include "parse.h"
+#include "print.h"
 
 static Stmt *p_stmts();
 static Block *p_block(TokenList *params);
@@ -19,7 +20,7 @@ static void error(char *msg, ...)
 	va_list args;
 	va_start(args, msg);
 	
-	fprintf(stderr, "error(%i): ", cur->line);
+	fprintf(stderr, P_BOLDRED "error(%li): " P_RESET, cur->line);
 	vfprintf(stderr, msg, args);
 	fprintf(stderr, "\n");
 	

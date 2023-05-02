@@ -32,7 +32,7 @@ typedef enum {
 
 typedef struct Token {
 	TokenType type;
-	int line;
+	int64_t line;
 	char *linep;
 	char *start;
 	int64_t length;
