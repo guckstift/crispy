@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "lex.h"
+#include "print.h"
 
 char *keywords[] = {
 	#define F(x) #x,
@@ -12,12 +13,6 @@ char *keywords[] = {
 
 static int line = 1;
 static char *linep = 0;
-
-static void error(char *msg)
-{
-	fprintf(stderr, "error(%i): %s\n", line, msg);
-	exit(EXIT_FAILURE);
-}
 
 Token *lex(char *src, char *src_end)
 {
@@ -49,7 +44,9 @@ Token *lex(char *src, char *src_end)
 					break;
 				}
 				else if(src == src_end) {
-					error("mult-line comment not terminated with */");
+					error_at(
+						&token, "mult-line comment not terminated with */"
+					);
 				}
 				
 				src++;
@@ -145,10 +142,12 @@ Token *lex(char *src, char *src_end)
 			
 			while(*src != '"') {
 				if(src == src_end) {
-					error("string not terminated with \"");
+					error_at(&token, "string not terminated with \"");
 				}
 				else if(*src >= 0 && *src <= 0x1f) {
-					error("no control characters allowed in string");
+					error_at(
+						&token, "no control characters allowed in string"
+					);
 				}
 				else if(*src == '\\') {
 					src ++;
@@ -160,7 +159,7 @@ Token *lex(char *src, char *src_end)
 						src ++;
 					}
 					else {
-						error("unsupported escape sequence");
+						error_at(&token, "unsupported escape sequence");
 					}
 				}
 				else {
@@ -193,7 +192,7 @@ Token *lex(char *src, char *src_end)
 			src++;
 		}
 		else {
-			error("unknown token");
+			error_at(&token, "unknown token");
 		}
 		
 		num_tokens ++;

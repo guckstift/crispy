@@ -10,18 +10,6 @@ static void a_expr(Expr *expr);
 static Scope *cur_scope = 0;
 static Stmt *cur_funcdecl = 0;
 
-static void error(int line, char *msg, ...)
-{
-	va_list args;
-	va_start(args, msg);
-	
-	fprintf(stderr, "error(%i): ", line);
-	vfprintf(stderr, msg, args);
-	fprintf(stderr, "\n");
-	
-	exit(EXIT_FAILURE);
-}
-
 static void add_used_var_to_func(Stmt *decl)
 {
 	DeclList *vars = cur_funcdecl->used_vars;

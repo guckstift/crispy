@@ -14,4 +14,4 @@ var i = 0;
 while foo() + bar() - i {
 	print "Hello";
 	i = i + 1;
-}
+:
