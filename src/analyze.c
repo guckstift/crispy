@@ -136,7 +136,7 @@ static void a_unary(Expr *unary)
 {
 	a_expr(unary->subexpr);
 	
-	if(unary->isconst) {
+	if(unary->isconst && unary->subexpr->type == EX_INT) {
 		unary->type = EX_INT;
 		
 		unary->value =
