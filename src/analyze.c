@@ -100,6 +100,7 @@ static void a_subscript(Expr *subscript)
 		index->value >= 0 && index->value < array->length
 	) {
 		*subscript = *array_get(array, index->value);
+		subscript->next = 0;
 	}
 }
 
