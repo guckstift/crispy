@@ -1,8 +1,11 @@
 function foo()
 {
 	var x = [1,2,3];
-	return x;
+	
+	if true {
+		var y = [4,4,4];
+		return [y];
+	}
 }
 
-print [foo()];
-print [[[1]]];
+print foo();

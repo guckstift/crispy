@@ -66,9 +66,8 @@
 	cur_scope_frame = cur_scope_frame->funcframe->parent \
 
 #define RETURN(expr) { \
-	Value result = expr; \
 	RETURN_SCOPE(); \
-	return result; \
+	return expr; \
 } \
 
 typedef enum {
