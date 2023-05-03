@@ -1,4 +1,23 @@
-var a = [0][0];
-#var b = [1,2,3]["Hello"];
+function foo()
+{
+	print [1,2][4];
+	var x = "He";
+	print x[[]];
+}
 
-print -true;
+function bar()
+{
+	if true {
+		foo();
+	}
+}
+
+function baz()
+{
+	print "mkay";
+	bar();
+}
+
+if true {
+	baz();
+}

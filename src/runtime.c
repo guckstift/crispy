@@ -23,23 +23,42 @@
 
 #define UNINITIALIZED {.type = TYX_UNINITIALIZED}
 
-#define BINOP(t, left, op, right) \
+#define BINOP(l, t, left, op, right) \
 	(Value){ \
 		.type = t, \
 		.value = check_type( \
-			TY_NULL, TY_INT, (left) \
+			l, TY_NULL, TY_INT, (left) \
 		).value op check_type( \
-			TY_NULL, TY_INT, (right) \
+			l, TY_NULL, TY_INT, (right) \
 		).value \
 	} \
 
-#define INT_UNARY(op, right) \
+#define INT_UNARY(l, op, right) \
 	(Value){ \
 		.type = TY_INT, \
 		.value = op check_type( \
-			TY_NULL, TY_INT, (right) \
+			l, TY_NULL, TY_INT, (right) \
 		).value \
 	} \
+
+#define PUSH_SCOPE(scope, fn) \
+	cur_scope_frame = &(ScopeFrame){ \
+		.parent = cur_scope_frame, \
+		.values = (Value*)&scope, \
+		.length = sizeof(scope) / sizeof(Value), \
+		.funcname = fn, \
+	}; \
+
+#define PUSH_EMPTY_SCOPE(fn) \
+	cur_scope_frame = &(ScopeFrame){ \
+		.parent = cur_scope_frame, \
+		.values = 0, \
+		.length = 0, \
+		.funcname = fn, \
+	}; \
+
+#define POP_SCOPE() \
+	cur_scope_frame = cur_scope_frame->parent \
 
 typedef enum {
 	TY_NULL,
@@ -81,6 +100,7 @@ typedef struct ScopeFrame {
 	struct ScopeFrame *parent;
 	Value *values;
 	int64_t length;
+	char *funcname;
 } ScopeFrame;
 
 typedef struct MemBlock {
@@ -98,20 +118,26 @@ static MemBlock *first_block = 0;
 static MemBlock *last_block = 0;
 static int64_t block_count = 0;
 
-static Value error(char *msg, ...) {
+static Value error(int64_t cur_line, char *msg, ...) {
 	va_list args;
 	va_start(args, msg);
-	fprintf(stderr, "error: ");
+	fprintf(stderr, "error at line %li: ", cur_line);
 	vfprintf(stderr, msg, args);
 	fprintf(stderr, "\n");
+	
+	for(ScopeFrame *frame = cur_scope_frame; frame; frame = frame->parent) {
+		if(frame->funcname) {
+			fprintf(stderr, "\t""in %s\n", frame->funcname);
+		}
+	}
+	
 	exit(EXIT_FAILURE);
 	return NULL_VALUE;
 }
 
-static Value *check_var(Value *var, char *name)
-{
+static Value *check_var(int64_t cur_line, Value *var, char *name) {
 	if(var->type == TYX_UNINITIALIZED) {
-		error("name %s is not defined", name);
+		error(cur_line, "name %s is not defined", name);
 	}
 	
 	return var;
@@ -200,16 +226,17 @@ static void print(Value value) {
 	cur_print_frame = cur_print_frame->parent;
 }
 
-static Value check_type(Type mintype, Type maxtype, Value value) {
+static Value check_type(
+	int64_t cur_line, Type mintype, Type maxtype, Value value
+) {
 	if(value.type < mintype || value.type > maxtype) {
-		error("wrong type");
+		error(cur_line, "wrong type");
 	}
 	
 	return value;
 }
 
-static void gc_mark(Value value)
-{
+static void gc_mark(Value value) {
 	if(value.type == TY_ARRAY) {
 		Array *array = value.array;
 		MemBlock *block = (MemBlock*)array;
@@ -227,8 +254,7 @@ static void gc_mark(Value value)
 	}
 }
 
-static void collect_garbage()
-{
+static void collect_garbage() {
 	for(ScopeFrame *frame = cur_scope_frame; frame; frame = frame->parent) {
 		for(int64_t i=0; i < frame->length; i++) {
 			Value value = frame->values[i];
@@ -292,15 +318,16 @@ static Array *new_array(int64_t length, ...) {
 	return array;
 }
 
-static Value call(Value value, int64_t argcount, ...) {
+static Value call(int64_t cur_line, Value value, int64_t argcount, ...) {
 	if(value.type == TYX_UNINITIALIZED) {
-		error("function is not yet initialized");
+		error(cur_line, "function is not yet initialized");
 	}
 	else if(value.type != TY_FUNCTION) {
-		error("callee is not callable");
+		error(cur_line, "callee is not callable");
 	}
 	else if(value.func->arity != argcount) {
 		error(
+			cur_line,
 			"callee needs %li arguments but got %li",
 			value.func->arity, argcount
 		);
@@ -313,24 +340,23 @@ static Value call(Value value, int64_t argcount, ...) {
 	return result;
 }
 
-static Value *subscript(Value array, Value index) {
+static Value *subscript(int64_t cur_line, Value array, Value index) {
 	if(array.type != TY_ARRAY) {
-		error("this is not an array");
+		error(cur_line, "this is not an array");
 	}
 	
 	if(index.type != TY_INT) {
-		error("subscript index is not an integer");
+		error(cur_line, "subscript index is not an integer");
 	}
 	
 	if(index.value < 0 || index.value >= array.array->length) {
-		error("array index out of range");
+		error(cur_line, "array index out of range");
 	}
 	
 	return array.array->items + index.value;
 }
 
-static bool truthy(Value value)
-{
+static bool truthy(Value value) {
 	if(value.type == TY_STRING) {
 		return value.string[0] != 0;
 	}

@@ -98,14 +98,20 @@ static void g_var(Expr *var)
 {
 	if(var->decl) {
 		if(is_var_used_in_func(var->decl)) {
-			write("(*check_var(&%V, \"%T\"))", var->decl, var->ident);
+			write(
+				"(*check_var(%i, &%V, \"%T\"))",
+				var->start->line, var->decl, var->ident
+			);
 		}
 		else {
 			write("%V", var->decl);
 		}
 	}
 	else {
-		write("error(\"name %T is not defined\")", var->ident);
+		write(
+			"error(%i, \"name %T is not defined\")",
+			var->ident->line, var->ident
+		);
 	}
 }
 
@@ -122,7 +128,7 @@ static void g_array(Expr *array)
 
 static void g_call(Expr *call)
 {
-	write("call(%E, %i", call->callee, call->argcount);
+	write("call(%i, %E, %i", call->start->line, call->callee, call->argcount);
 	
 	for(Expr *arg = call->args; arg; arg = arg->next) {
 		write(", %E", arg);
@@ -155,10 +161,16 @@ static void g_const_init_expr(Expr *expr)
 static void g_binop(Expr *expr)
 {
 	if(expr->oplevel == OP_CMP) {
-		write("BINOP(TY_BOOL, %E, %T, %E)", expr->left, expr->op, expr->right);
+		write(
+			"BINOP(%i, TY_BOOL, %E, %T, %E)",
+			expr->start->line, expr->left, expr->op, expr->right
+		);
 	}
 	else {
-		write("BINOP(TY_INT, %E, %T, %E)", expr->left, expr->op, expr->right);
+		write(
+			"BINOP(%i, TY_INT, %E, %T, %E)",
+			expr->start->line, expr->left, expr->op, expr->right
+		);
 	}
 }
 
@@ -190,10 +202,18 @@ static void g_expr(Expr *expr)
 			g_array(expr);
 			break;
 		case EX_SUBSCRIPT:
-			write("(*subscript(%E, %E))", expr->array, expr->index);
+			write(
+				"(*subscript(%i, %E, %E))",
+				expr->start->line, expr->array, expr->index
+			);
+			
 			break;
 		case EX_UNARY:
-			write("INT_UNARY(%T, %E)", expr->op, expr->subexpr);
+			write(
+				"INT_UNARY(%i, %T, %E)",
+				expr->start->line, expr->op, expr->subexpr
+			);
+			
 			break;
 	}
 }
@@ -315,7 +335,6 @@ static void g_funcdecl(Stmt *decl)
 static void g_return(Stmt *stmt)
 {
 	if(stmt->scope->decl_count > 0) {
-		write("%>cur_scope_frame = cur_scope_frame->parent;\n");
 	}
 	
 	if(stmt->value) {
@@ -393,22 +412,35 @@ static void g_block(Block *block)
 		g_scope(block->scope);
 	}
 	
+	Stmt *hosting_func = block->scope->hosting_func;
+	char *func_name = 0;
+	
+	if(hosting_func && block == hosting_func->body) {
+		func_name = hosting_func->ident->text;
+	}
+	else if(block->scope->parent == 0) {
+		func_name = "<main>";
+	}
+	
 	if(block->scope->decl_count > 0) {
-		write(
-			"%>cur_scope_frame = &(ScopeFrame){"
-			"cur_scope_frame, (Value*)&scope%i, %i};\n",
-			block->scope->scope_id, block->scope->decl_count
-		);
+		write("%>PUSH_SCOPE(scope%i, ", block->scope->scope_id);
+	}
+	else {
+		write("%>PUSH_EMPTY_SCOPE(");
+	}
+	
+	if(func_name) {
+		write("\"%s\");\n", func_name);
+	}
+	else {
+		write("0);\n");
 	}
 	
 	for(Stmt *stmt = block->stmts; stmt; stmt = stmt->next) {
 		g_stmt(stmt);
 	}
 	
-	if(block->scope->decl_count > 0) {
-		write("%>cur_scope_frame = cur_scope_frame->parent;\n");
-	}
-	
+	write("%>POP_SCOPE();\n");
 	level --;
 }
 

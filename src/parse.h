@@ -134,7 +134,7 @@ typedef struct Stmt {
 	};
 	
 	union {
-		TokenList *params;
+		TokenList *params; // funcdecl
 	};
 } Stmt;
 
