@@ -1,23 +1,13 @@
 function foo()
 {
-	print [1,2][4];
-	var x = "He";
-	print x[[]];
-}
-
-function bar()
-{
+	var x = [1,2,3];
+	
 	if true {
-		foo();
+		var y = [4,4,4];
+		return [y];
 	}
 }
 
-function baz()
-{
-	print "mkay";
-	bar();
-}
+print foo();
 
-if true {
-	baz();
-}
+var x = [];

@@ -44,6 +44,7 @@
 #define PUSH_SCOPE(scope, fn) \
 	cur_scope_frame = &(ScopeFrame){ \
 		.parent = cur_scope_frame, \
+		.funcframe = cur_scope_frame ? cur_scope_frame->funcframe : 0, \
 		.values = (Value*)&scope, \
 		.length = sizeof(scope) / sizeof(Value), \
 		.funcname = fn, \
@@ -52,6 +53,7 @@
 #define PUSH_EMPTY_SCOPE(fn) \
 	cur_scope_frame = &(ScopeFrame){ \
 		.parent = cur_scope_frame, \
+		.funcframe = cur_scope_frame ? cur_scope_frame->funcframe : 0, \
 		.values = 0, \
 		.length = 0, \
 		.funcname = fn, \
@@ -59,6 +61,15 @@
 
 #define POP_SCOPE() \
 	cur_scope_frame = cur_scope_frame->parent \
+
+#define RETURN_SCOPE() \
+	cur_scope_frame = cur_scope_frame->funcframe->parent \
+
+#define RETURN(expr) { \
+	Value result = expr; \
+	RETURN_SCOPE(); \
+	return result; \
+} \
 
 typedef enum {
 	TY_NULL,
@@ -98,6 +109,7 @@ typedef struct PrintFrame {
 
 typedef struct ScopeFrame {
 	struct ScopeFrame *parent;
+	struct ScopeFrame *funcframe;
 	Value *values;
 	int64_t length;
 	char *funcname;

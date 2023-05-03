@@ -342,10 +342,10 @@ static void g_return(Stmt *stmt)
 	}
 	
 	if(stmt->value) {
-		write("%>return %E;\n", stmt->value);
+		write("%>RETURN(%E);\n", stmt->value);
 	}
 	else {
-		write("%>return NULL_VALUE;\n");
+		write("%>RETURN(NULL_VALUE);\n");
 	}
 }
 
@@ -434,6 +434,10 @@ static void g_block(Block *block)
 	}
 	else {
 		write("0);\n");
+	}
+	
+	if(hosting_func && block == hosting_func->body) {
+		write("%>cur_scope_frame->funcframe = cur_scope_frame;\n");
 	}
 	
 	for(Stmt *stmt = block->stmts; stmt; stmt = stmt->next) {
