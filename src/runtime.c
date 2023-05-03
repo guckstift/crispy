@@ -276,6 +276,8 @@ static void collect_garbage() {
 	
 	for(MemBlock *block = first_block, *prev = 0; block;) {
 		if(block->mark == 0) {
+			((int64_t*)block->data)[0] = 0;
+			
 			if(block == first_block) {
 				first_block = block->next;
 				free(block);
@@ -316,17 +318,24 @@ static void *mem_alloc(int64_t size) {
 }
 
 static Array *new_array(int64_t length, ...) {
-	Array *array = mem_alloc(sizeof(Array) + length * sizeof(Value));
-	array->length = length;
-	
+	Value items[length];
+	PUSH_SCOPE(items, 0);
 	va_list args;
 	va_start(args, length);
 	
 	for(int64_t i=0; i < length; i++) {
-		array->items[i] = va_arg(args, Value);
+		items[i] = va_arg(args, Value);
 	}
 	
 	va_end(args);
+	Array *array = mem_alloc(sizeof(Array) + length * sizeof(Value));
+	array->length = length;
+	
+	for(int64_t i=0; i < length; i++) {
+		array->items[i] = items[i];
+	}
+	
+	POP_SCOPE();
 	return array;
 }
 
