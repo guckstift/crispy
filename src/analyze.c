@@ -75,10 +75,32 @@ static void a_array(Expr *array)
 	}
 }
 
+static Expr *array_get(Expr *array, int64_t index)
+{
+	Expr *item = array->items;
+	
+	while(index) {
+		item = item->next;
+		index --;
+	}
+	
+	return item;
+}
+
 static void a_subscript(Expr *subscript)
 {
-	a_expr(subscript->array);
-	a_expr(subscript->index);
+	Expr *array = subscript->array;
+	Expr *index = subscript->index;
+	
+	a_expr(array);
+	a_expr(index);
+	
+	if(
+		array->type == EX_ARRAY && index->isconst && index->type == EX_INT &&
+		index->value >= 0 && index->value < array->length
+	) {
+		*subscript = *array_get(array, index->value);
+	}
 }
 
 static void a_binop(Expr *binop)
@@ -110,6 +132,20 @@ static void a_binop(Expr *binop)
 	}
 }
 
+static void a_unary(Expr *unary)
+{
+	a_expr(unary->subexpr);
+	
+	if(unary->isconst) {
+		unary->type = EX_INT;
+		
+		unary->value =
+			unary->op->punct == '+' ? +unary->subexpr->value :
+			unary->op->punct == '-' ? -unary->subexpr->value :
+			0 /* should never happen */;
+	}
+}
+
 static void a_expr(Expr *expr)
 {
 	switch(expr->type) {
@@ -129,7 +165,7 @@ static void a_expr(Expr *expr)
 			a_subscript(expr);
 			break;
 		case EX_UNARY:
-			a_expr(expr->subexpr);
+			a_unary(expr);
 			break;
 	}
 }

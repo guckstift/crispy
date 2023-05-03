@@ -146,6 +146,9 @@ static void g_const_init_expr(Expr *expr)
 		case EX_STRING:
 			write("STRING_VALUE_INIT(\"%s\")", expr->string);
 			break;
+		default:
+			write("/* g_const_init_expr default */");
+			break;
 	}
 }
 
