@@ -276,15 +276,16 @@ static void g_funcdecl(Stmt *decl)
 
 static void g_return(Stmt *stmt)
 {
-	if(stmt->scope->decl_count > 0) {
-		write("%>cur_scope_frame = cur_scope_frame->parent;\n");
-	}
-	
 	if(stmt->value) {
 		g_tmp_assigns(stmt->value);
 	}
 	
-	write("%>return ");
+	if(stmt->scope->decl_count > 0) {
+		write("%>RETURN(");
+	}
+	else {
+		write("%>return(");
+	}
 	
 	if(stmt->value) {
 		g_expr(stmt->value, false);
@@ -293,7 +294,7 @@ static void g_return(Stmt *stmt)
 		write("NULL_VALUE");
 	}
 	
-	write(";\n");
+	write(");\n");
 }
 
 static void g_stmt(Stmt *stmt)

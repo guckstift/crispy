@@ -1,15 +1,7 @@
-var y = true;
-
 function foo()
 {
-	print "Hello";
-	x = 1;
-	print x;
-	y = 9;
-	print y;
+	var x = [1,2];
+	return x;
 }
 
-foo();
-
-var x = - y;
-
+print [foo()];

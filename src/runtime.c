@@ -27,6 +27,12 @@
 		).value \
 	} \
 
+#define RETURN(x) { \
+	Value result = x; \
+	cur_scope_frame = cur_scope_frame->parent; \
+	return result; \
+} \
+
 typedef enum {
 	TY_NULL,
 	TY_BOOL,
