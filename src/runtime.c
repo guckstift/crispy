@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 #define NULL_VALUE ((Value){.type = TY_NULL})
 #define NULL_VALUE_INIT {.type = TY_NULL}
@@ -326,4 +327,19 @@ static Value *subscript(Value array, Value index) {
 	}
 	
 	return array.array->items + index.value;
+}
+
+static bool truthy(Value value)
+{
+	if(value.type == TY_STRING) {
+		return value.string[0] != 0;
+	}
+	else if(value.type == TY_ARRAY) {
+		return value.array->length != 0;
+	}
+	else if(value.type == TY_FUNCTION) {
+		return true;
+	}
+	
+	return value.value;
 }

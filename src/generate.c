@@ -98,7 +98,7 @@ static void g_var(Expr *var)
 {
 	if(var->decl) {
 		if(is_var_used_in_func(var->decl)) {
-			write("*check_var(&%V, \"%T\")", var->decl, var->ident);
+			write("(*check_var(&%V, \"%T\"))", var->decl, var->ident);
 		}
 		else {
 			write("%V", var->decl);
@@ -187,7 +187,7 @@ static void g_expr(Expr *expr)
 			g_array(expr);
 			break;
 		case EX_SUBSCRIPT:
-			write("*subscript(%E, %E)", expr->array, expr->index);
+			write("(*subscript(%E, %E))", expr->array, expr->index);
 			break;
 		case EX_UNARY:
 			write("INT_UNARY(%T, %E)", expr->op, expr->subexpr);
@@ -330,7 +330,7 @@ static void g_return(Stmt *stmt)
 static void g_if(Stmt *ifstmt)
 {
 	g_tmp_assigns(ifstmt->cond, false);
-	write("%>if(%E.value) {\n", ifstmt->cond);
+	write("%>if(truthy(%E)) {\n", ifstmt->cond);
 	g_block(ifstmt->body);
 	write("%>}\n");
 	
@@ -372,7 +372,7 @@ static void g_stmt(Stmt *stmt)
 			break;
 		case ST_WHILE:
 			g_tmp_assigns(stmt->cond, false);
-			write("%>while(%E.value) {\n", stmt->cond);
+			write("%>while(truthy(%E)) {\n", stmt->cond);
 			g_block(stmt->body);
 			level ++;
 			g_tmp_assigns(stmt->cond, true);

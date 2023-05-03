@@ -202,7 +202,7 @@ Comparison operations can not be chained: e.g.: `a < b == c` is not allowed.
 All operators have left-to-right associativity and are also evaluated from left
 to right.
 
-All operands can be an integers, booleans or even `null`. `null` is interpreted
+All operands can be integers, booleans or even `null`. `null` is interpreted
 as `0`, `true` as `1` and `false` as `0`.
 
 A call expression is just like a call statement but evaluated to its return
