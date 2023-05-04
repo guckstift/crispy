@@ -14,7 +14,7 @@ char *keywords[] = {
 static int line = 1;
 static char *linep = 0;
 
-Token *lex(char *src, char *src_end)
+Tokens *lex(char *src, char *src_end)
 {
 	Token *tokens = 0;
 	int num_tokens = 0;
@@ -209,5 +209,10 @@ Token *lex(char *src, char *src_end)
 		tokens[num_tokens - 1] = token;
 	}
 	
-	return tokens;
+	Tokens *list = calloc(1, sizeof(TokenList));
+	list->tokens = tokens;
+	list->count = num_tokens;
+	list->eof_line = line;
+	
+	return list;
 }

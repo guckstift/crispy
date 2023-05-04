@@ -33,11 +33,10 @@ int main(int argc, char **argv)
 	src[filesize] = 0;
 	fread(src, 1, filesize, file);
 	
-	Token *tokens = lex(src, src + filesize);
+	Tokens *tokens = lex(src, src + filesize);
 	print_tokens(tokens);
 	
-	Module *module = parse(tokens);
-	print_module(module);
+	Module *module = parse(tokens->tokens);
 	analyze(module);
 	print_module(module);
 	

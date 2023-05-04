@@ -27,7 +27,14 @@ void vfprint(FILE *fs, char *msg, va_list args)
 				fprintf(fs, "%s", va_arg(args, char*));
 			}
 			else if(*msg == 'p') {
-				fprintf(fs, "%p", va_arg(args, void*));
+				void *p = va_arg(args, void*);
+				
+				if(p) {
+					fprintf(fs, "%p", p);
+				}
+				else {
+					fprintf(fs, "null");
+				}
 			}
 			else if(*msg == 't') {
 				Token *token = va_arg(args, Token*);
@@ -53,6 +60,11 @@ void vfprint(FILE *fs, char *msg, va_list args)
 				}
 				else {
 					fprint(fs, "%t", token);
+				}
+			}
+			else if(*msg == '>') {
+				for(int i=0; i < level; i++) {
+					fprint(fs, "\t");
 				}
 			}
 		}
@@ -157,38 +169,50 @@ void print_token(Token *token)
 {
 	switch(token->type) {
 		case TK_KEYWORD:
-			print("KEYWORD");
+			print("KEYWORD ");
 			break;
 		case TK_IDENT:
-			print("IDENT");
+			print("IDENT   ");
 			break;
 		case TK_INT:
-			print("INT");
+			print("INT     ");
 			break;
 		case TK_STRING:
-			print("STRING");
+			print("STRING  ");
 			break;
 		case TK_PUNCT:
-			print("PUNCT");
+			print("PUNCT   ");
 			break;
 	}
 	
-	print(": %T", token);
+	print("%T", token);
 }
 
-void print_tokens(Token *tokens)
+void print_tokens(Tokens *list)
 {
-	for(Token *token = tokens; token->type != TK_EOF; token ++) {
-		print("%i: ", token->line);
+	int64_t line = 0;
+	int64_t space = dec_len(list->eof_line) + 2;
+	
+	print(P_COL_SECTION "=== tokens ===\n" P_RESET);
+	
+	for(Token *token = list->tokens; token->type != TK_EOF; token ++) {
+		if(token->line != line) {
+			line = token->line;
+			print(P_COL_LINENO "%i:" P_RESET, line);
+			int64_t post_space = space - dec_len(line) - 1;
+			
+			for(int64_t i=0; i < post_space; i++) {
+				print(" ");
+			}
+		}
+		else {
+			for(int64_t i=0; i < space; i++) {
+				print(" ");
+			}
+		}
+		
 		print_token(token);
 		print("\n");
-	}
-}
-
-static void print_indent()
-{
-	for(int i=0; i < level; i++) {
-		print("\t");
 	}
 }
 
@@ -278,24 +302,28 @@ void fprint_expr(FILE *fs, Expr *expr)
 
 static void print_vardecl(Stmt *vardecl)
 {
-	print("%K %T", "var", vardecl->ident);
+	print("%>%K %T", "var", vardecl->ident);
 	
 	if(vardecl->init) {
 		print(" = ");
 		print_expr(vardecl->init);
 	}
+	
+	print("\n");
 }
 
 static void print_assign(Stmt *assign)
 {
+	print("%>");
 	print_expr(assign->target);
 	print(" = ");
 	print_expr(assign->value);
+	print("\n");
 }
 
 static void print_print(Stmt *stmt)
 {
-	print("%K ", "print");
+	print("%>%K ", "print");
 	
 	for(Expr *value = stmt->values; value; value = value->next) {
 		if(value != stmt->values) {
@@ -304,11 +332,13 @@ static void print_print(Stmt *stmt)
 		
 		print_expr(value);
 	}
+	
+	print("\n");
 }
 
 static void print_funcdecl(Stmt *funcdecl)
 {
-	print("%K %T(", "function", funcdecl->ident);
+	print("%>%K %T(", "function", funcdecl->ident);
 	TokenList *params = funcdecl->params;
 	
 	for(TokenItem *item = params->first_item; item; item = item->next) {
@@ -323,57 +353,55 @@ static void print_funcdecl(Stmt *funcdecl)
 	level++;
 	print_block(funcdecl->body);
 	level--;
-	print_indent();
-	print("}");
+	print("%>}\n");
 }
 
 static void print_call(Stmt *call)
 {
+	print("%>");
 	print_callexpr(call->call);
+	print("\n");
 }
 
 static void print_return(Stmt *returnstmt)
 {
-	print("%K ", "return");
+	print("%>%K ", "return");
 	
 	if(returnstmt->value) {
 		print_expr(returnstmt->value);
 	}
+	
+	print("\n");
 }
 
 static void print_if(Stmt *ifstmt)
 {
-	print("%K ", "if");
+	print("%>%K ", "if");
 	print_expr(ifstmt->cond);
 	print(" {\n");
 	level++;
 	print_block(ifstmt->body);
 	level--;
-	print_indent();
-	print("}");
+	print("%>}\n");
 	
 	if(ifstmt->else_body) {
-		print("\n");
-		print_indent();
-		print("%K {\n", "else");
+		print("%>%K {\n", "else");
 		level++;
 		print_block(ifstmt->else_body);
 		level--;
-		print_indent();
-		print("}");
+		print("%>}\n");
 	}
 }
 
 static void print_while(Stmt *stmt)
 {
-	print("%K ", "while");
+	print("%>%K ", "while");
 	print_expr(stmt->cond);
 	print(" {\n");
 	level++;
 	print_block(stmt->body);
 	level--;
-	print_indent();
-	print("}");
+	print("%>}\n");
 }
 
 static void print_stmt(Stmt *stmt)
@@ -409,29 +437,43 @@ static void print_stmt(Stmt *stmt)
 void print_scope(Scope *scope)
 {
 	outfile = stdout;
-	print("# scope(funchost:%p) %p: ", scope->hosting_func, scope);
+	print("%>" P_COL_COMMENT "# scope %p", scope);
 	
-	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
-		print("%s ", decl->ident->text);
+	if(scope->hosting_func) {
+		print(", func=%T" P_COL_COMMENT, scope->hosting_func->ident);
 	}
 	
-	print("\n");
+	if(scope->parent) {
+		print(", parent=%p", scope->parent);
+	}
+	
+	if(scope->decl_count > 0) {
+		print(", symbols=");
+		
+		for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
+			if(decl != scope->first_decl) {
+				print(",");
+			}
+			
+			print("%T" P_COL_COMMENT, decl->ident);
+		}
+	}
+	
+	print(P_RESET "\n");
 }
 
 static void print_block(Block *block)
 {
-	print_indent();
 	print_scope(block->scope);
 	
 	for(Stmt *stmt = block->stmts; stmt; stmt = stmt->next) {
-		print_indent();
 		print_stmt(stmt);
-		print("\n");
 	}
 }
 
 void print_module(Module *module)
 {
+	print(P_COL_SECTION "=== module AST ===\n" P_RESET);
 	level = 0;
 	outfile = stdout;
 	print_block(module->block);

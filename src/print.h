@@ -15,6 +15,8 @@
 #define P_COL_IDENT    P_RGB(64, 255, 255)
 #define P_COL_LITERAL  P_RGB(255, 64, 255)
 #define P_COL_LINENO   P_RGB(128, 128, 128)
+#define P_COL_COMMENT  P_RGB(160, 160, 160)
+#define P_COL_SECTION  P_RGB(255, 255, 64)
 #define P_ERROR        P_BOLD P_COL_ERROR
 
 void vfprint(FILE *fs, char *msg, va_list args);
@@ -29,7 +31,7 @@ void verror_at(Token *at, char *msg, va_list args);
 void error_at(Token *at, char *msg, ...);
 void verror_after_t(Token *t, char *msg, va_list args);
 
-void print_tokens(Token *tokens);
+void print_tokens(Tokens *list);
 void print_token(Token *token);
 void print_scope(Scope *scope);
 void print_module(Module *module);
