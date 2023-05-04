@@ -71,6 +71,12 @@
 	return expr; \
 } \
 
+#define TRACK_TEMP(tmp_expr) \
+	((cur_scope_frame->temps = &(Temp){ \
+		.prev = cur_scope_frame->temps, \
+		.value = tmp_expr, \
+	})->value) \
+
 typedef enum {
 	TY_NULL,
 	TY_BOOL,
@@ -107,12 +113,18 @@ typedef struct PrintFrame {
 	Value value;
 } PrintFrame;
 
+typedef struct Temp {
+	struct Temp *prev;
+	Value value;
+} Temp;
+
 typedef struct ScopeFrame {
 	struct ScopeFrame *parent;
 	struct ScopeFrame *funcframe;
 	Value *values;
 	int64_t length;
 	char *funcname;
+	Temp *temps;
 } ScopeFrame;
 
 typedef struct MemBlock {
@@ -285,6 +297,10 @@ static void gc_mark(Value value) {
 
 static void collect_garbage() {
 	for(ScopeFrame *frame = cur_scope_frame; frame; frame = frame->parent) {
+		for(Temp *temp = frame->temps; temp; temp = temp->prev) {
+			gc_mark(temp->value);
+		}
+		
 		for(int64_t i=0; i < frame->length; i++) {
 			Value value = frame->values[i];
 			gc_mark(value);
@@ -306,6 +322,7 @@ static void collect_garbage() {
 				block = prev->next;
 			}
 			
+			printf("freed\n");
 			block_count --;
 		}
 		else {
@@ -332,6 +349,11 @@ static void *mem_alloc(int64_t size) {
 	last_block = block;
 	block_count ++;
 	return block->data;
+}
+
+static void unwind_temps()
+{
+	cur_scope_frame->temps = 0;
 }
 
 static Array *new_array(int64_t length, ...) {

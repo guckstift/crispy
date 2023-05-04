@@ -12,7 +12,7 @@ static Expr *p_expr();
 static Token *cur = 0;
 static Scope *cur_scope = 0;
 static int next_func_id = 0;
-static int next_tmp_id = 0;
+static int next_tmp_id = 1;
 static int next_scope_id = 0;
 
 static void error(char *msg, ...)
@@ -119,23 +119,21 @@ static Expr *p_array()
 		return 0;
 	}
 	
-	Expr *first = p_expr();
-	Expr *last = first;
+	Expr *item = p_expr();
+	Expr *first = item;
+	Expr *last = item;
 	int64_t length = 0;
-	int64_t has_side_effects = 0;
 	
-	if(first) {
+	if(item) {
 		length = 1;
-		has_side_effects = first->has_side_effects;
 		
 		while(eat_punct(",")) {
-			Expr *item = p_expr();
+			item = p_expr();
 			
 			if(!item) {
 				error_after("expected another array item after ','");
 			}
 			
-			has_side_effects = has_side_effects || item->has_side_effects;
 			last->next = item;
 			last = item;
 			length ++;
@@ -149,7 +147,8 @@ static Expr *p_array()
 	Expr *expr = calloc(1, sizeof(Expr));
 	expr->type = EX_ARRAY;
 	expr->isconst = 0;
-	expr->has_side_effects = has_side_effects;
+	expr->has_tmps = 1;
+	expr->tmp_id = next_tmp_id++;
 	expr->start = start;
 	expr->items = first;
 	expr->length = length;
@@ -243,13 +242,12 @@ static Expr *p_callexpr_x(Expr *callee)
 	Expr *expr = calloc(1, sizeof(Expr));
 	expr->type = EX_CALL;
 	expr->isconst = 0;
-	expr->has_side_effects = 1;
+	expr->has_tmps = 1;
 	expr->start = callee->start;
 	expr->callee = callee;
-	expr->tmp_id = next_tmp_id;
+	expr->tmp_id = next_tmp_id++;
 	expr->args = first;
 	expr->argcount = argcount;
-	next_tmp_id ++;
 	cur_scope->had_side_effects = 1;
 	return expr;
 }
@@ -270,10 +268,7 @@ static Expr *p_subscript_x(Expr *array)
 	expr->type = EX_SUBSCRIPT;
 	expr->isconst = 0;
 	expr->islvalue = 1;
-	
-	expr->has_side_effects =
-		array->has_side_effects || index->has_side_effects;
-	
+	expr->has_tmps = array->has_tmps || index->has_tmps;
 	expr->start = array->start;
 	expr->array = array;
 	expr->index = index;
@@ -320,7 +315,7 @@ static Expr *p_unary()
 	Expr *expr = calloc(1, sizeof(Expr));
 	expr->type = EX_UNARY;
 	expr->isconst = subexpr->isconst;
-	expr->has_side_effects = subexpr->has_side_effects;
+	expr->has_tmps = subexpr->has_tmps;
 	expr->start = op;
 	expr->subexpr = subexpr;
 	expr->op = op;
@@ -389,10 +384,7 @@ static Expr *p_binop(int level)
 		Expr *binop = calloc(1, sizeof(Expr));
 		binop->type = EX_BINOP;
 		binop->isconst = left->isconst && right->isconst;
-		
-		binop->has_side_effects =
-			left->has_side_effects || right->has_side_effects;
-		
+		binop->has_tmps = left->has_tmps || right->has_tmps;
 		binop->start = left->start;
 		binop->left = left;
 		binop->right = right;
@@ -829,6 +821,8 @@ Module *parse(Token *tokens)
 	cur = tokens;
 	cur_scope = 0;
 	next_func_id = 0;
+	next_tmp_id = 1;
+	next_scope_id = 0;
 	Block *block = p_block(0);
 	
 	if(!eat_token(TK_EOF)) {

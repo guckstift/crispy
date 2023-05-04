@@ -174,7 +174,7 @@ static void g_binop(Expr *expr)
 	}
 }
 
-static void g_expr(Expr *expr)
+static void g_expr_immed(Expr *expr)
 {
 	switch(expr->type) {
 		case EX_NULL:
@@ -196,7 +196,7 @@ static void g_expr(Expr *expr)
 			g_binop(expr);
 			break;
 		case EX_CALL:
-			g_tmpvar(expr);
+			g_call(expr);
 			break;
 		case EX_ARRAY:
 			g_array(expr);
@@ -215,6 +215,16 @@ static void g_expr(Expr *expr)
 			);
 			
 			break;
+	}
+}
+
+static void g_expr(Expr *expr)
+{
+	if(expr->tmp_id > 0) {
+		g_tmpvar(expr);
+	}
+	else {
+		g_expr_immed(expr);
 	}
 }
 
@@ -267,7 +277,7 @@ static void g_scope(Scope *scope)
 
 static void g_tmp_assigns(Expr *expr, bool reassign)
 {
-	if(!expr->has_side_effects) {
+	if(!expr->has_tmps) {
 		return;
 	}
 	
@@ -277,11 +287,10 @@ static void g_tmp_assigns(Expr *expr, bool reassign)
 	}
 	else if(expr->type == EX_CALL) {
 		g_tmp_assigns(expr->callee, reassign);
-		write("%>%s", !reassign ? "Value " : "");
-		g_tmpvar(expr);
-		write(" = ");
-		g_call(expr);
-		write(";\n");
+		
+		for(Expr *arg = expr->args; arg; arg = arg->next) {
+			g_tmp_assigns(arg, reassign);
+		}
 	}
 	else if(expr->type == EX_ARRAY) {
 		for(Expr *item = expr->items; item; item = item->next) {
@@ -291,6 +300,17 @@ static void g_tmp_assigns(Expr *expr, bool reassign)
 	else if(expr->type == EX_SUBSCRIPT) {
 		g_tmp_assigns(expr->array, reassign);
 		g_tmp_assigns(expr->index, reassign);
+	}
+	else if(expr->type == EX_UNARY) {
+		g_tmp_assigns(expr->subexpr, reassign);
+	}
+	
+	if(expr->tmp_id > 0) {
+		write("%>%s", !reassign ? "Value " : "");
+		g_tmpvar(expr);
+		write(" = TRACK_TEMP(");
+		g_expr_immed(expr);
+		write(");\n");
 	}
 }
 
@@ -305,6 +325,7 @@ static void g_vardecl(Stmt *decl)
 		
 		g_tmp_assigns(init, false);
 		write("%>%V = %E;\n", decl, init);
+		write("%>unwind_temps();\n");
 	}
 }
 
@@ -324,6 +345,7 @@ static void g_print(Stmt *print)
 	}
 	
 	write("\n%>);\n");
+	write("%>unwind_temps();\n");
 }
 
 static void g_funcdecl(Stmt *decl)
@@ -365,6 +387,8 @@ static void g_if(Stmt *ifstmt)
 		g_block(ifstmt->else_body);
 		write("%>}\n");
 	}
+	
+	write("%>unwind_temps();\n");
 }
 
 static void g_stmt(Stmt *stmt)
@@ -377,6 +401,7 @@ static void g_stmt(Stmt *stmt)
 			g_tmp_assigns(stmt->target, false);
 			g_tmp_assigns(stmt->value, false);
 			write("%>%E = %E;\n", stmt->target, stmt->value);
+			write("%>unwind_temps();\n");
 			break;
 		case ST_PRINT:
 			g_print(stmt);
@@ -385,10 +410,8 @@ static void g_stmt(Stmt *stmt)
 			g_funcdecl(stmt);
 			break;
 		case ST_CALL:
-			g_tmp_assigns(stmt->call->callee, false);
-			write("%>");
-			g_call(stmt->call);
-			write(";\n");
+			g_tmp_assigns(stmt->call, false);
+			write("%>unwind_temps();\n");
 			break;
 		case ST_RETURN:
 			g_return(stmt);
@@ -404,6 +427,7 @@ static void g_stmt(Stmt *stmt)
 			g_tmp_assigns(stmt->cond, true);
 			level --;
 			write("%>}\n");
+			write("%>unwind_temps();\n");
 			break;
 	}
 }

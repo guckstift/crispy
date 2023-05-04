@@ -28,7 +28,8 @@ typedef struct Expr {
 	ExprType type;
 	int isconst;
 	int islvalue;
-	int has_side_effects;
+	int has_tmps;
+	int64_t tmp_id;
 	Token *start;
 	struct Expr *next;
 	
@@ -45,7 +46,6 @@ typedef struct Expr {
 	
 	union {
 		struct Expr *right; // binop
-		int64_t tmp_id; // call
 		int64_t length; // array
 		struct Expr *index; // subscript
 		struct Stmt *decl; // var
