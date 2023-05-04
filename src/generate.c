@@ -310,16 +310,20 @@ static void g_vardecl(Stmt *decl)
 
 static void g_print(Stmt *print)
 {
+	int64_t num = 0;
+	
 	for(Expr *value = print->values; value; value = value->next) {
-		if(value != print->values) {
-			write("%>printf(\" \");\n");
-		}
-		
 		g_tmp_assigns(value, false);
-		write("%>print(%E);\n", value);
+		num ++;
 	}
 	
-	write("%>printf(\"\\n\");\n");
+	write("%>print(%i", num);
+	
+	for(Expr *value = print->values; value; value = value->next) {
+		write(",\n%>\t%E", value);
+	}
+	
+	write("\n%>);\n");
 }
 
 static void g_funcdecl(Stmt *decl)

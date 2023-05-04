@@ -120,7 +120,7 @@ typedef struct MemBlock {
 	char data[];
 } MemBlock;
 
-static void print(Value value);
+static void print_value(Value value);
 static void value_decref(Value value);
 
 static PrintFrame *cur_print_frame = 0;
@@ -181,7 +181,7 @@ static void print_repr(Value value) {
 		printf("\"");
 	}
 	else {
-		print(value);
+		print_value(value);
 	}
 }
 
@@ -209,7 +209,7 @@ static void print_array(Array *array) {
 	printf("]");
 }
 
-static void print(Value value) {
+static void print_value(Value value) {
 	PrintFrame frame = {.parent = cur_print_frame, .value = value};
 	cur_print_frame = &frame;
 	
@@ -235,6 +235,23 @@ static void print(Value value) {
 	}
 	
 	cur_print_frame = cur_print_frame->parent;
+}
+
+static void print(int64_t num, ...)
+{
+	va_list args;
+	va_start(args, num);
+	
+	for(int64_t i=0; i < num; i++) {
+		if(i > 0) {
+			printf(" ");
+		}
+		
+		print_value(va_arg(args, Value));
+	}
+	
+	va_end(args);
+	printf("\n");
 }
 
 static Value check_type(
