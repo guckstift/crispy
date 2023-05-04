@@ -325,6 +325,20 @@ static void g_vardecl(Stmt *decl)
 		
 		g_tmp_assigns(init, false);
 		write("%>%V = %E;\n", decl, init);
+		
+		if(init->has_tmps) {
+			write("%>unwind_temps();\n");
+		}
+	}
+}
+
+static void g_assign(Stmt *assign)
+{
+	g_tmp_assigns(assign->target, false);
+	g_tmp_assigns(assign->value, false);
+	write("%>%E = %E;\n", assign->target, assign->value);
+	
+	if(assign->target->has_tmps || assign->value->has_tmps) {
 		write("%>unwind_temps();\n");
 	}
 }
@@ -332,10 +346,15 @@ static void g_vardecl(Stmt *decl)
 static void g_print(Stmt *print)
 {
 	int64_t num = 0;
+	bool has_tmps = false;
 	
 	for(Expr *value = print->values; value; value = value->next) {
 		g_tmp_assigns(value, false);
 		num ++;
+		
+		if(value->has_tmps) {
+			has_tmps = true;
+		}
 	}
 	
 	write("%>print(%i", num);
@@ -345,7 +364,10 @@ static void g_print(Stmt *print)
 	}
 	
 	write("\n%>);\n");
-	write("%>unwind_temps();\n");
+	
+	if(has_tmps) {
+		write("%>unwind_temps();\n");
+	}
 }
 
 static void g_funcdecl(Stmt *decl)
@@ -379,6 +401,11 @@ static void g_if(Stmt *ifstmt)
 {
 	g_tmp_assigns(ifstmt->cond, false);
 	write("%>if(truthy(%E)) {\n", ifstmt->cond);
+	
+	if(ifstmt->cond->has_tmps) {
+		write("%>\t""unwind_temps();\n");
+	}
+	
 	g_block(ifstmt->body);
 	write("%>}\n");
 	
@@ -388,7 +415,29 @@ static void g_if(Stmt *ifstmt)
 		write("%>}\n");
 	}
 	
-	write("%>unwind_temps();\n");
+	if(ifstmt->cond->has_tmps) {
+		write("%>unwind_temps();\n");
+	}
+}
+
+static void g_while(Stmt *whilestmt)
+{
+	g_tmp_assigns(whilestmt->cond, false);
+	write("%>while(truthy(%E)) {\n", whilestmt->cond);
+	
+	if(whilestmt->cond->has_tmps) {
+		write("%>\t""unwind_temps();\n");
+	}
+	
+	g_block(whilestmt->body);
+	level ++;
+	g_tmp_assigns(whilestmt->cond, true);
+	level --;
+	write("%>}\n");
+	
+	if(whilestmt->cond->has_tmps) {
+		write("%>unwind_temps();\n");
+	}
 }
 
 static void g_stmt(Stmt *stmt)
@@ -398,10 +447,7 @@ static void g_stmt(Stmt *stmt)
 			g_vardecl(stmt);
 			break;
 		case ST_ASSIGN:
-			g_tmp_assigns(stmt->target, false);
-			g_tmp_assigns(stmt->value, false);
-			write("%>%E = %E;\n", stmt->target, stmt->value);
-			write("%>unwind_temps();\n");
+			g_assign(stmt);
 			break;
 		case ST_PRINT:
 			g_print(stmt);
@@ -420,14 +466,7 @@ static void g_stmt(Stmt *stmt)
 			g_if(stmt);
 			break;
 		case ST_WHILE:
-			g_tmp_assigns(stmt->cond, false);
-			write("%>while(truthy(%E)) {\n", stmt->cond);
-			g_block(stmt->body);
-			level ++;
-			g_tmp_assigns(stmt->cond, true);
-			level --;
-			write("%>}\n");
-			write("%>unwind_temps();\n");
+			g_while(stmt);
 			break;
 	}
 }

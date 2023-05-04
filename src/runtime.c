@@ -322,7 +322,6 @@ static void collect_garbage() {
 				block = prev->next;
 			}
 			
-			printf("freed\n");
 			block_count --;
 		}
 		else {
