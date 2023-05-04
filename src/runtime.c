@@ -13,6 +13,7 @@
 #define STRING_VALUE(v) ((Value){.type = TY_STRING, .string = v})
 #define STRING_VALUE_INIT(v) {.type = TY_STRING, .string = v}
 #define ARRAY_VALUE(v) ((Value){.type = TY_ARRAY, .array = v})
+#define NEW_ARRAY(...) ARRAY_VALUE(new_array(__VA_ARGS__))
 
 #define FUNCTION_VALUE_INIT(v, a) { \
 	.type = TY_FUNCTION, \

@@ -117,13 +117,13 @@ static void g_var(Expr *var)
 
 static void g_array(Expr *array)
 {
-	write("ARRAY_VALUE(new_array(%i", array->length);
+	write("NEW_ARRAY(%i", array->length);
 	
 	for(Expr *item = array->items; item; item = item->next) {
 		write(", %E", item);
 	}
 	
-	write("))");
+	write(")");
 }
 
 static void g_call(Expr *call)
