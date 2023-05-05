@@ -16,6 +16,14 @@ This document specifies the *crispy* programming language 0.4 and its compiler.
 
 * missing variable name errors all deferred to runtime
 
+## Known Bugs
+
+* constructing an array of multiple arrays as items does not work:
+  the garbage collector picks up the first array item before allocating the
+  second array item, e.g.:
+  `print [[1], [2]];`
+  prints out `[[1], []]`
+
 ## Compiler
 
 The `crispy` compiler program translates *crispy* module files to C source
