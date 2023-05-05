@@ -408,16 +408,17 @@ static void g_if(Stmt *ifstmt)
 	
 	g_block(ifstmt->body);
 	write("%>}\n");
-	
-	if(ifstmt->else_body) {
-		write("%>else {\n");
-		g_block(ifstmt->else_body);
-		write("%>}\n");
-	}
+	write("%>else {\n");
 	
 	if(ifstmt->cond->has_tmps) {
-		write("%>unwind_temps();\n");
+		write("%>\t""unwind_temps();\n");
 	}
+	
+	if(ifstmt->else_body) {
+		g_block(ifstmt->else_body);
+	}
+	
+	write("%>}\n");
 }
 
 static void g_while(Stmt *whilestmt)

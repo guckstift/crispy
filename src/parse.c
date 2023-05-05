@@ -374,6 +374,11 @@ static Expr *p_binop(int level)
 			error_at(at, "strings can not be used with %T", op);
 		}
 		
+		if(left->type == EX_ARRAY || right->type == EX_ARRAY) {
+			Token *at = left->type == EX_ARRAY ? left->start : right->start;
+			error_at(at, "arrays can not be used with %T", op);
+		}
+		
 		if(
 			level == OP_CMP &&
 			left->type == EX_BINOP && left->oplevel == OP_CMP
