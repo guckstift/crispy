@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include "analyze.h"
+#include "print.h"
 
 static void a_block(Block *block);
 static void a_expr(Expr *expr);
@@ -208,6 +209,12 @@ static void a_call(Stmt *call)
 
 static void a_return(Stmt *returnstmt)
 {
+	if(!cur_funcdecl) {
+		error_at(
+			returnstmt->start, "return can only be used inside a function"
+		);
+	}
+	
 	if(returnstmt->value) {
 		a_expr(returnstmt->value);
 	}

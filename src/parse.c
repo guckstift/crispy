@@ -650,10 +650,6 @@ static Stmt *p_return()
 		return 0;
 	}
 	
-	if(!cur_scope->parent) {
-		error_at(start, "return can only be used inside a function");
-	}
-	
 	Expr *value = p_expr();
 	
 	if(!eat_punct(";")) {
