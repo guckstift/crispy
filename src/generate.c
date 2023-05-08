@@ -379,9 +379,6 @@ static void g_funcdecl(Decl *decl)
 
 static void g_return(Stmt *stmt)
 {
-	if(stmt->scope->decl_count > 0) {
-	}
-	
 	if(stmt->value) {
 		g_tmp_assigns(stmt->value, false);
 	}

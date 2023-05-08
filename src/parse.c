@@ -448,7 +448,6 @@ static Stmt *p_vardecl()
 	stmt->type = ST_VARDECL;
 	stmt->start = start;
 	stmt->end = cur;
-	stmt->scope = cur_scope;
 	stmt->decl = decl;
 	
 	if(!declare(decl)) {
@@ -467,7 +466,6 @@ static Stmt *p_call_x(Expr *call)
 	Stmt *stmt = calloc(1, sizeof(Stmt));
 	stmt->start = call->start;
 	stmt->end = cur;
-	stmt->scope = cur_scope;
 	stmt->type = ST_CALL;
 	stmt->call = call;
 	return stmt;
@@ -489,7 +487,6 @@ static Stmt *p_assign_x(Expr *target)
 	stmt->type = ST_ASSIGN;
 	stmt->start = target->start;
 	stmt->end = cur;
-	stmt->scope = cur_scope;
 	stmt->target = target;
 	stmt->value = value;
 	return stmt;
@@ -553,7 +550,6 @@ static Stmt *p_print()
 	stmt->type = ST_PRINT;
 	stmt->start = start;
 	stmt->end = cur;
-	stmt->scope = cur_scope;
 	stmt->values = first;
 	return stmt;
 }
@@ -632,7 +628,6 @@ static Stmt *p_funcdecl()
 	stmt->type = ST_FUNCDECL;
 	stmt->start = start;
 	stmt->end = cur;
-	stmt->scope = cur_scope;
 	stmt->decl = decl;
 	
 	if(!declare(decl)) {
@@ -660,7 +655,6 @@ static Stmt *p_return()
 	stmt->type = ST_RETURN;
 	stmt->start = start;
 	stmt->end = cur;
-	stmt->scope = cur_scope;
 	stmt->value = value;
 	return stmt;
 }
@@ -707,7 +701,6 @@ static Stmt *p_if()
 	stmt->type = ST_IF;
 	stmt->start = start;
 	stmt->end = cur;
-	stmt->scope = cur_scope;
 	stmt->cond = cond;
 	stmt->body = body;
 	stmt->else_body = else_body;
@@ -743,7 +736,6 @@ static Stmt *p_while()
 	stmt->type = ST_WHILE;
 	stmt->start = start;
 	stmt->end = cur;
-	stmt->scope = cur_scope;
 	stmt->cond = cond;
 	stmt->body = body;
 	

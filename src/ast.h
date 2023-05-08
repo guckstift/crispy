@@ -125,7 +125,6 @@ typedef struct Stmt {
 	StmtType type;
 	Token *start;
 	Token *end;
-	struct Scope *scope;
 	struct Stmt *next;
 	
 	union {
