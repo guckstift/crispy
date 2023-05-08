@@ -14,13 +14,8 @@
 #define STRING_VALUE_INIT(v) {.type = TY_STRING, .string = v}
 #define ARRAY_VALUE(v) ((Value){.type = TY_ARRAY, .array = v})
 #define NEW_ARRAY(...) ARRAY_VALUE(new_array(__VA_ARGS__))
-
-#define FUNCTION_VALUE_INIT(v, a) { \
-	.type = TY_FUNCTION, \
-	.func = &(Function){.func = v, .arity = a} \
-}
-
-#define FUNCTION_VALUE(v, a) ((Value)FUNCTION_VALUE_INIT(v, a))
+#define FUNCTION_VALUE(v) ((Value){.type = TY_FUNCTION, .func = v})
+#define NEW_FUNCTION(...) FUNCTION_VALUE(new_function(__VA_ARGS__))
 
 #define UNINITIALIZED {.type = TYX_UNINITIALIZED}
 
@@ -95,6 +90,7 @@ typedef struct Value {
 		char *string;
 		struct Array *array;
 		struct Function *func;
+		void *ptr;
 	};
 } Value;
 
@@ -103,8 +99,10 @@ typedef struct Array {
 	Value items[];
 } Array;
 
+typedef Value (*FuncPtr)(va_list args);
+
 typedef struct Function {
-	struct Value (*func)(va_list args);
+	FuncPtr func;
 	int64_t arity;
 } Function;
 
@@ -279,8 +277,7 @@ static Value check_type(
 
 static void gc_mark(Value value) {
 	if(value.type == TY_ARRAY) {
-		Array *array = value.array;
-		MemBlock *block = (MemBlock*)array;
+		MemBlock *block = (MemBlock*)value.ptr;
 		block --;
 		
 		if(block->mark == 1) {
@@ -288,10 +285,16 @@ static void gc_mark(Value value) {
 		}
 		
 		block->mark = 1;
+		Array *array = value.array;
 		
 		for(int64_t i=0; i < array->length; i++) {
 			gc_mark(array->items[i]);
 		}
+	}
+	else if(value.type == TY_FUNCTION) {
+		MemBlock *block = (MemBlock*)value.ptr;
+		block --;
+		block->mark = 1;
 	}
 }
 
@@ -375,6 +378,13 @@ static Array *new_array(int64_t length, ...) {
 	
 	POP_SCOPE();
 	return array;
+}
+
+static Function *new_function(FuncPtr funcptr, int64_t arity) {
+	Function *func = mem_alloc(sizeof(Function));
+	func->func = funcptr;
+	func->arity = arity;
+	return func;
 }
 
 static Value call(int64_t cur_line, Value value, int64_t argcount, ...) {

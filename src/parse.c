@@ -623,10 +623,7 @@ static Stmt *p_funcdecl()
 	stmt->body = body;
 	stmt->func_id = func_id;
 	stmt->params = params;
-	
-	if(cur_scope->had_side_effects) {
-		stmt->init_deferred = 1;
-	}
+	stmt->init_deferred = 1;
 	
 	if(!declare(stmt)) {
 		error_at(ident, "name %T already declared", ident);

@@ -259,9 +259,6 @@ static void g_scope(Scope *scope)
 				write("NULL_VALUE_INIT");
 			}
 		}
-		else if(decl->type == ST_FUNCDECL) {
-			write("FUNCTION_VALUE_INIT(%F, %i)", decl, decl->params->length);
-		}
 		
 		write(",\n");
 	}
@@ -374,7 +371,7 @@ static void g_funcdecl(Stmt *decl)
 {
 	if(decl->init_deferred) {
 		write(
-			"%>%V = FUNCTION_VALUE(%F, %i);\n",
+			"%>%V = NEW_FUNCTION(%F, %i);\n",
 			decl, decl, decl->params->length
 		);
 	}
