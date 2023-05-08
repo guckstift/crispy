@@ -142,7 +142,7 @@ static MemBlock *first_block = 0;
 static MemBlock *last_block = 0;
 static int64_t block_count = 0;
 
-static Value error(int64_t cur_line, char *msg, ...) {
+static Value *error(int64_t cur_line, char *msg, ...) {
 	va_list args;
 	va_start(args, msg);
 	fprintf(stderr, "error at line %li: ", cur_line);
@@ -156,7 +156,7 @@ static Value error(int64_t cur_line, char *msg, ...) {
 	}
 	
 	exit(EXIT_FAILURE);
-	return NULL_VALUE;
+	return &NULL_VALUE;
 }
 
 static Value *check_var(int64_t cur_line, Value *var, char *name) {

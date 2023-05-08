@@ -109,7 +109,7 @@ static void g_var(Expr *var)
 	}
 	else {
 		write(
-			"error(%i, \"name %T is not defined\")",
+			"(*error(%i, \"name %T is not defined\"))",
 			var->ident->line, var->ident
 		);
 	}
