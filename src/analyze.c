@@ -13,9 +13,9 @@ static Decl *cur_funcdecl = 0;
 
 static void add_used_var_to_func(Decl *decl)
 {
-	DeclList *vars = cur_funcdecl->used_vars;
+	DeclItem *vars = cur_funcdecl->used_vars;
 	
-	for(DeclItem *item = vars->first_item; item; item = item->next) {
+	for(DeclItem *item = cur_funcdecl->used_vars; item; item = item->next) {
 		if(decl == item->decl) {
 			return;
 		}
@@ -23,15 +23,8 @@ static void add_used_var_to_func(Decl *decl)
 	
 	DeclItem *item = calloc(1, sizeof(DeclItem));
 	item->decl = decl;
-	
-	if(vars->first_item) {
-		vars->last_item->next = item;
-	}
-	else {
-		vars->first_item = item;
-	}
-	
-	vars->last_item = item;
+	item->next = cur_funcdecl->used_vars;
+	cur_funcdecl->used_vars = item;
 }
 
 static void a_var(Expr *var)
@@ -196,7 +189,7 @@ static void a_funcdecl(Decl *funcdecl)
 {
 	Decl *old_funcdecl = cur_funcdecl;
 	cur_funcdecl = funcdecl;
-	funcdecl->used_vars = calloc(1, sizeof(DeclList));
+	funcdecl->used_vars = calloc(1, sizeof(DeclItem));
 	funcdecl->body->scope->hosting_func = funcdecl;
 	a_block(funcdecl->body);
 	cur_funcdecl = old_funcdecl;

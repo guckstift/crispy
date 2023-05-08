@@ -67,19 +67,13 @@ typedef struct DeclItem {
 	struct DeclItem *next;
 } DeclItem;
 
-typedef struct {
-	DeclItem *first_item;
-	DeclItem *last_item;
-} DeclList;
-
 typedef struct TokenItem {
 	Token *token;
 	struct TokenItem *next;
 } TokenItem;
 
 typedef struct {
-	TokenItem *first_item;
-	TokenItem *last_item;
+	TokenItem *items;
 	int64_t length;
 } TokenList;
 
@@ -102,7 +96,7 @@ typedef struct Decl {
 	};
 	
 	union {
-		DeclList *used_vars; // funcdecl
+		DeclItem *used_vars; // funcdecl
 	};
 	
 	union {
@@ -147,8 +141,7 @@ typedef struct Stmt {
 
 typedef struct Scope {
 	struct Scope *parent;
-	Decl *first;
-	Decl *last;
+	Decl *decls;
 	int64_t decl_count;
 	int64_t scope_id;
 	int had_side_effects;

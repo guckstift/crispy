@@ -83,9 +83,7 @@ static bool is_var_used_in_func(Decl *decl)
 		return false;
 	}
 	
-	DeclList *vars = cur_funcdecl->used_vars;
-	
-	for(DeclItem *item = vars->first_item; item; item = item->next) {
+	for(DeclItem *item = cur_funcdecl->used_vars; item; item = item->next) {
 		if(decl == item->decl) {
 			return true;
 		}
@@ -236,13 +234,13 @@ static void g_scope(Scope *scope)
 	
 	write("%>struct {\n");
 	
-	for(Decl *decl = scope->first; decl; decl = decl->next) {
+	for(Decl *decl = scope->decls; decl; decl = decl->next) {
 		write("\t%>Value m_%s;\n", decl->ident->text);
 	}
 	
 	write("%>} scope%i = {\n", scope->scope_id);
 	
-	for(Decl *decl = scope->first; decl; decl = decl->next) {
+	for(Decl *decl = scope->decls; decl; decl = decl->next) {
 		write("\t%>");
 		
 		if(decl->init_deferred) {
@@ -265,7 +263,7 @@ static void g_scope(Scope *scope)
 	
 	write("%>};\n");
 	
-	for(Decl *decl = scope->first; decl; decl = decl->next) {
+	for(Decl *decl = scope->decls; decl; decl = decl->next) {
 		if(!decl->isfunc && decl->is_param) {
 			write("%>%V = va_arg(args, Value);\n", decl);
 		}

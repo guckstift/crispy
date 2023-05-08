@@ -209,7 +209,7 @@ Tokens *lex(char *src, char *src_end)
 		tokens[num_tokens - 1] = token;
 	}
 	
-	Tokens *list = calloc(1, sizeof(TokenList));
+	Tokens *list = calloc(1, sizeof(Tokens));
 	list->tokens = tokens;
 	list->count = num_tokens;
 	list->eof_line = line;

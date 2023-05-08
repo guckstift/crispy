@@ -31,7 +31,7 @@ static void error_after(char *msg, ...)
 
 static Decl *lookup_flat(Token *ident, Scope *scope)
 {
-	for(Decl *decl = scope->first; decl; decl = decl->next) {
+	for(Decl *decl = scope->decls; decl; decl = decl->next) {
 		if(strcmp(decl->ident->text, ident->text) == 0) {
 			return decl;
 		}
@@ -61,16 +61,10 @@ static int declare(Decl *decl)
 		return 0;
 	}
 	
-	if(cur_scope->first) {
-		cur_scope->last->next = decl;
-	}
-	else {
-		cur_scope->first = decl;
-	}
-	
-	cur_scope->last = decl;
-	cur_scope->decl_count ++;
+	decl->next = cur_scope->decls;
 	decl->scope = cur_scope;
+	cur_scope->decls = decl;
+	cur_scope->decl_count ++;
 	return 1;
 }
 
@@ -580,9 +574,8 @@ static Stmt *p_funcdecl()
 	if(param) {
 		TokenItem *item = calloc(1, sizeof(TokenItem));
 		item->token = param;
-		item->next = 0;
-		params->first_item = item;
-		params->last_item = item;
+		item->next = params->items;
+		params->items = item;
 		params->length = 1;
 		
 		while(eat_punct(",")) {
@@ -594,9 +587,8 @@ static Stmt *p_funcdecl()
 			
 			TokenItem *item = calloc(1, sizeof(TokenItem));
 			item->token = param;
-			item->next = 0;
-			params->last_item->next = item;
-			params->last_item = item;
+			item->next = params->items;
+			params->items = item;
 			params->length ++;
 		}
 	}
@@ -790,7 +782,7 @@ static Block *p_block(TokenList *params)
 	cur_scope = scope;
 	
 	if(params) {
-		for(TokenItem *item = params->first_item; item; item = item->next) {
+		for(TokenItem *item = params->items; item; item = item->next) {
 			Decl *decl = calloc(1, sizeof(Decl));
 			decl->ident = item->token;
 			decl->end = item->token + 1;

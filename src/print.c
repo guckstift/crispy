@@ -341,8 +341,8 @@ static void print_funcdecl(Decl *funcdecl)
 	print("%>%K %T(", "function", funcdecl->ident);
 	TokenList *params = funcdecl->params;
 	
-	for(TokenItem *item = params->first_item; item; item = item->next) {
-		if(item != params->first_item) {
+	for(TokenItem *item = params->items; item; item = item->next) {
+		if(item != params->items) {
 			print(", ");
 		}
 		
@@ -450,8 +450,8 @@ void print_scope(Scope *scope)
 	if(scope->decl_count > 0) {
 		print(", symbols=");
 		
-		for(Decl *decl = scope->first; decl; decl = decl->next) {
-			if(decl != scope->first) {
+		for(Decl *decl = scope->decls; decl; decl = decl->next) {
+			if(decl != scope->decls) {
 				print(",");
 			}
 			
