@@ -48,7 +48,7 @@ typedef struct Expr {
 		struct Expr *right; // binop
 		int64_t length; // array
 		struct Expr *index; // subscript
-		struct Stmt *decl; // var
+		struct Decl *decl; // var
 	};
 	
 	union {
@@ -62,19 +62,8 @@ typedef struct Expr {
 	};
 } Expr;
 
-typedef enum {
-	ST_VARDECL,
-	ST_ASSIGN,
-	ST_PRINT,
-	ST_FUNCDECL,
-	ST_CALL,
-	ST_RETURN,
-	ST_IF,
-	ST_WHILE,
-} StmtType;
-
 typedef struct DeclItem {
-	struct Stmt *decl;
+	struct Decl *decl;
 	struct DeclItem *next;
 } DeclItem;
 
@@ -94,38 +83,17 @@ typedef struct {
 	int64_t length;
 } TokenList;
 
-typedef struct Stmt {
-	StmtType type;
-	Token *start;
-	Token *end;
+typedef struct Decl {
+	struct Decl *next; // next in scope
 	struct Scope *scope;
-	struct Stmt *next;
-	
-	union {
-		Token *ident; // vardecl, funcdecl
-		Expr *target; // assign
-		Expr *cond; // if, while
-	};
+	Token *ident;
+	Token *end;
+	int isfunc;
+	int init_deferred;
 	
 	union {
 		Expr *init; // vardecl
-		Expr *value; // assign, return
-		Expr *values; // print
-		Expr *call; // call
-		struct Block *body; // funcdecl, if, while
-	};
-	
-	union {
-		DeclList *used_vars; // funcdecl
-		struct Block *else_body; // if
-	};
-	
-	union {
-		struct Stmt *next_decl; // vardecl, funcdecl
-	};
-	
-	union {
-		int init_deferred; // vardecl, funcdecl
+		struct Block *body; // funcdecl
 	};
 	
 	union {
@@ -134,18 +102,58 @@ typedef struct Stmt {
 	};
 	
 	union {
+		DeclList *used_vars; // funcdecl
+	};
+	
+	union {
 		TokenList *params; // funcdecl
+	};
+} Decl;
+
+typedef enum {
+	ST_VARDECL,
+	ST_ASSIGN,
+	ST_PRINT,
+	ST_FUNCDECL,
+	ST_CALL,
+	ST_RETURN,
+	ST_IF,
+	ST_WHILE,
+} StmtType;
+
+typedef struct Stmt {
+	StmtType type;
+	Token *start;
+	Token *end;
+	struct Scope *scope;
+	struct Stmt *next;
+	
+	union {
+		Decl *decl; // vardecl, funcdecl
+		Expr *target; // assign
+		Expr *cond; // if, while
+	};
+	
+	union {
+		Expr *value; // assign, return
+		Expr *values; // print
+		Expr *call; // call
+		struct Block *body; // funcdecl, if, while
+	};
+	
+	union {
+		struct Block *else_body; // if
 	};
 } Stmt;
 
 typedef struct Scope {
 	struct Scope *parent;
-	Stmt *first_decl;
-	Stmt *last_decl;
+	Decl *first;
+	Decl *last;
 	int64_t decl_count;
 	int64_t scope_id;
 	int had_side_effects;
-	Stmt *hosting_func;
+	Decl *hosting_func;
 } Scope;
 
 typedef struct Block {

@@ -29,9 +29,9 @@ static void error_after(char *msg, ...)
 	verror_after_t(cur - 1, msg, args);
 }
 
-static Stmt *lookup_flat(Token *ident, Scope *scope)
+static Decl *lookup_flat(Token *ident, Scope *scope)
 {
-	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
+	for(Decl *decl = scope->first; decl; decl = decl->next) {
 		if(strcmp(decl->ident->text, ident->text) == 0) {
 			return decl;
 		}
@@ -40,9 +40,9 @@ static Stmt *lookup_flat(Token *ident, Scope *scope)
 	return 0;
 }
 
-Stmt *lookup(Token *ident, Scope *scope)
+Decl *lookup(Token *ident, Scope *scope)
 {
-	Stmt *decl = lookup_flat(ident, scope);
+	Decl *decl = lookup_flat(ident, scope);
 	
 	if(decl) {
 		return decl;
@@ -55,21 +55,22 @@ Stmt *lookup(Token *ident, Scope *scope)
 	return 0;
 }
 
-static int declare(Stmt *decl)
+static int declare(Decl *decl)
 {
 	if(lookup_flat(decl->ident, cur_scope)) {
 		return 0;
 	}
 	
-	if(cur_scope->first_decl) {
-		cur_scope->last_decl->next_decl = decl;
+	if(cur_scope->first) {
+		cur_scope->last->next = decl;
 	}
 	else {
-		cur_scope->first_decl = decl;
+		cur_scope->first = decl;
 	}
 	
-	cur_scope->last_decl = decl;
+	cur_scope->last = decl;
 	cur_scope->decl_count ++;
+	decl->scope = cur_scope;
 	return 1;
 }
 
@@ -434,19 +435,23 @@ static Stmt *p_vardecl()
 		error_after("expected ';' after variable declaration");
 	}
 	
+	Decl *decl = calloc(1, sizeof(Decl));
+	decl->ident = ident;
+	decl->end = cur;
+	decl->init = init;
+	
+	if(cur_scope->had_side_effects || init && !init->isconst) {
+		decl->init_deferred = 1;
+	}
+	
 	Stmt *stmt = calloc(1, sizeof(Stmt));
 	stmt->type = ST_VARDECL;
 	stmt->start = start;
 	stmt->end = cur;
 	stmt->scope = cur_scope;
-	stmt->ident = ident;
-	stmt->init = init;
+	stmt->decl = decl;
 	
-	if(cur_scope->had_side_effects || init && !init->isconst) {
-		stmt->init_deferred = 1;
-	}
-	
-	if(!declare(stmt)) {
+	if(!declare(decl)) {
 		error_at(ident, "name %T already declared", ident);
 	}
 	
@@ -614,18 +619,23 @@ static Stmt *p_funcdecl()
 		error("expected '}' or another statement");
 	}
 	
+	Decl *decl = calloc(1, sizeof(Decl));
+	decl->ident = ident;
+	decl->end = cur;
+	decl->isfunc = 1;
+	decl->init_deferred = 1;
+	decl->body = body;
+	decl->func_id = func_id;
+	decl->params = params;
+	
 	Stmt *stmt = calloc(1, sizeof(Stmt));
 	stmt->type = ST_FUNCDECL;
 	stmt->start = start;
 	stmt->end = cur;
 	stmt->scope = cur_scope;
-	stmt->ident = ident;
-	stmt->body = body;
-	stmt->func_id = func_id;
-	stmt->params = params;
-	stmt->init_deferred = 1;
+	stmt->decl = decl;
 	
-	if(!declare(stmt)) {
+	if(!declare(decl)) {
 		error_at(ident, "name %T already declared", ident);
 	}
 	
@@ -793,15 +803,12 @@ static Block *p_block(TokenList *params)
 	
 	if(params) {
 		for(TokenItem *item = params->first_item; item; item = item->next) {
-			Stmt *stmt = calloc(1, sizeof(Stmt));
-			stmt->type = ST_VARDECL;
-			stmt->start = item->token;
-			stmt->end = stmt->start + 1;
-			stmt->scope = cur_scope;
-			stmt->ident = item->token;
-			stmt->is_param = 1;
+			Decl *decl = calloc(1, sizeof(Decl));
+			decl->ident = item->token;
+			decl->end = item->token + 1;
+			decl->is_param = 1;
 			
-			if(!declare(stmt)) {
+			if(!declare(decl)) {
 				error_at(
 					item->token, "parameter %T already declared", item->token
 				);

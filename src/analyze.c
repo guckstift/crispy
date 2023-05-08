@@ -8,9 +8,9 @@ static void a_block(Block *block);
 static void a_expr(Expr *expr);
 
 static Scope *cur_scope = 0;
-static Stmt *cur_funcdecl = 0;
+static Decl *cur_funcdecl = 0;
 
-static void add_used_var_to_func(Stmt *decl)
+static void add_used_var_to_func(Decl *decl)
 {
 	DeclList *vars = cur_funcdecl->used_vars;
 	
@@ -171,7 +171,7 @@ static void a_expr(Expr *expr)
 	}
 }
 
-static void a_vardecl(Stmt *vardecl)
+static void a_vardecl(Decl *vardecl)
 {
 	if(vardecl->init) {
 		a_expr(vardecl->init);
@@ -191,9 +191,9 @@ static void a_print(Stmt *print)
 	}
 }
 
-static void a_funcdecl(Stmt *funcdecl)
+static void a_funcdecl(Decl *funcdecl)
 {
-	Stmt *old_funcdecl = cur_funcdecl;
+	Decl *old_funcdecl = cur_funcdecl;
 	cur_funcdecl = funcdecl;
 	funcdecl->used_vars = calloc(1, sizeof(DeclList));
 	funcdecl->body->scope->hosting_func = funcdecl;
@@ -233,7 +233,7 @@ static void a_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
 		case ST_VARDECL:
-			a_vardecl(stmt);
+			a_vardecl(stmt->decl);
 			break;
 		case ST_ASSIGN:
 			a_assign(stmt);
@@ -242,7 +242,7 @@ static void a_stmt(Stmt *stmt)
 			a_print(stmt);
 			break;
 		case ST_FUNCDECL:
-			a_funcdecl(stmt);
+			a_funcdecl(stmt->decl);
 			break;
 		case ST_CALL:
 			a_call(stmt);

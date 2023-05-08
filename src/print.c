@@ -300,7 +300,7 @@ void fprint_expr(FILE *fs, Expr *expr)
 	print_expr(expr);
 }
 
-static void print_vardecl(Stmt *vardecl)
+static void print_vardecl(Decl *vardecl)
 {
 	print("%>%K %T", "var", vardecl->ident);
 	
@@ -336,7 +336,7 @@ static void print_print(Stmt *stmt)
 	print("\n");
 }
 
-static void print_funcdecl(Stmt *funcdecl)
+static void print_funcdecl(Decl *funcdecl)
 {
 	print("%>%K %T(", "function", funcdecl->ident);
 	TokenList *params = funcdecl->params;
@@ -408,7 +408,7 @@ static void print_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
 		case ST_VARDECL:
-			print_vardecl(stmt);
+			print_vardecl(stmt->decl);
 			break;
 		case ST_ASSIGN:
 			print_assign(stmt);
@@ -417,7 +417,7 @@ static void print_stmt(Stmt *stmt)
 			print_print(stmt);
 			break;
 		case ST_FUNCDECL:
-			print_funcdecl(stmt);
+			print_funcdecl(stmt->decl);
 			break;
 		case ST_CALL:
 			print_call(stmt);
@@ -450,8 +450,8 @@ void print_scope(Scope *scope)
 	if(scope->decl_count > 0) {
 		print(", symbols=");
 		
-		for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
-			if(decl != scope->first_decl) {
+		for(Decl *decl = scope->first; decl; decl = decl->next) {
+			if(decl != scope->first) {
 				print(",");
 			}
 			

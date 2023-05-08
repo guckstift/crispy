@@ -3,7 +3,7 @@
 
 #include "ast.h"
 
-Stmt *lookup(Token *ident, Scope *scope);
+Decl *lookup(Token *ident, Scope *scope);
 Module *parse(Token *tokens);
 
 #endif

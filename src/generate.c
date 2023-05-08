@@ -8,7 +8,7 @@ static void g_block(Block *block);
 
 static FILE *file = 0;
 static int64_t level = 0;
-static Stmt *cur_funcdecl = 0;
+static Decl *cur_funcdecl = 0;
 
 static void write(char *msg, ...)
 {
@@ -33,11 +33,11 @@ static void write(char *msg, ...)
 				fwrite(token->start, 1, token->length, file);
 			}
 			else if(*msg == 'F') {
-				Stmt *func = va_arg(args, Stmt*);
+				Decl *func = va_arg(args, Decl*);
 				fprintf(file, "func%li_%s", func->func_id, func->ident->text);
 			}
 			else if(*msg == 'V') {
-				Stmt *vardecl = va_arg(args, Stmt*);
+				Decl *vardecl = va_arg(args, Decl*);
 				
 				write(
 					"scope%i.m_%T", vardecl->scope->scope_id, vardecl->ident
@@ -77,7 +77,7 @@ static void g_tmpvar(Expr *expr)
 	write("tmp%i", expr->tmp_id);
 }
 
-static bool is_var_used_in_func(Stmt *decl)
+static bool is_var_used_in_func(Decl *decl)
 {
 	if(cur_funcdecl == 0) {
 		return false;
@@ -236,19 +236,19 @@ static void g_scope(Scope *scope)
 	
 	write("%>struct {\n");
 	
-	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
+	for(Decl *decl = scope->first; decl; decl = decl->next) {
 		write("\t%>Value m_%s;\n", decl->ident->text);
 	}
 	
 	write("%>} scope%i = {\n", scope->scope_id);
 	
-	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
+	for(Decl *decl = scope->first; decl; decl = decl->next) {
 		write("\t%>");
 		
 		if(decl->init_deferred) {
 			write("UNINITIALIZED");
 		}
-		else if(decl->type == ST_VARDECL) {
+		else if(!decl->isfunc) {
 			if(decl->is_param) {
 				write("UNINITIALIZED");
 			}
@@ -265,8 +265,8 @@ static void g_scope(Scope *scope)
 	
 	write("%>};\n");
 	
-	for(Stmt *decl = scope->first_decl; decl; decl = decl->next_decl) {
-		if(decl->type == ST_VARDECL && decl->is_param) {
+	for(Decl *decl = scope->first; decl; decl = decl->next) {
+		if(!decl->isfunc && decl->is_param) {
 			write("%>%V = va_arg(args, Value);\n", decl);
 		}
 	}
@@ -311,7 +311,7 @@ static void g_tmp_assigns(Expr *expr, bool reassign)
 	}
 }
 
-static void g_vardecl(Stmt *decl)
+static void g_vardecl(Decl *decl)
 {
 	if(decl->init_deferred) {
 		Expr *init = decl->init;
@@ -367,7 +367,7 @@ static void g_print(Stmt *print)
 	}
 }
 
-static void g_funcdecl(Stmt *decl)
+static void g_funcdecl(Decl *decl)
 {
 	if(decl->init_deferred) {
 		write(
@@ -442,7 +442,7 @@ static void g_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
 		case ST_VARDECL:
-			g_vardecl(stmt);
+			g_vardecl(stmt->decl);
 			break;
 		case ST_ASSIGN:
 			g_assign(stmt);
@@ -451,7 +451,7 @@ static void g_stmt(Stmt *stmt)
 			g_print(stmt);
 			break;
 		case ST_FUNCDECL:
-			g_funcdecl(stmt);
+			g_funcdecl(stmt->decl);
 			break;
 		case ST_CALL:
 			g_tmp_assigns(stmt->call, false);
@@ -477,7 +477,7 @@ static void g_block(Block *block)
 		g_scope(block->scope);
 	}
 	
-	Stmt *hosting_func = block->scope->hosting_func;
+	Decl *hosting_func = block->scope->hosting_func;
 	char *func_name = 0;
 	
 	if(hosting_func && block == hosting_func->body) {
@@ -513,7 +513,7 @@ static void g_block(Block *block)
 	level --;
 }
 
-static void g_funcproto(Stmt *funcdecl)
+static void g_funcproto(Decl *funcdecl)
 {
 	write("Value %F(va_list args);\n", funcdecl);
 }
@@ -522,8 +522,8 @@ static void g_funcprotos(Block *block)
 {
 	for(Stmt *stmt = block->stmts; stmt; stmt = stmt->next) {
 		if(stmt->type == ST_FUNCDECL) {
-			g_funcproto(stmt);
-			g_funcprotos(stmt->body);
+			g_funcproto(stmt->decl);
+			g_funcprotos(stmt->decl->body);
 		}
 		else if(stmt->type == ST_IF) {
 			g_funcprotos(stmt->body);
@@ -531,7 +531,7 @@ static void g_funcprotos(Block *block)
 	}
 }
 
-static void g_funcimpl(Stmt *funcdecl)
+static void g_funcimpl(Decl *funcdecl)
 {
 	cur_funcdecl = funcdecl;
 	write("Value %F(va_list args) {\n", funcdecl);
@@ -545,8 +545,8 @@ static void g_funcimpls(Block *block)
 {
 	for(Stmt *stmt = block->stmts; stmt; stmt = stmt->next) {
 		if(stmt->type == ST_FUNCDECL) {
-			g_funcimpl(stmt);
-			g_funcimpls(stmt->body);
+			g_funcimpl(stmt->decl);
+			g_funcimpls(stmt->decl->body);
 		}
 		else if(stmt->type == ST_IF) {
 			g_funcimpls(stmt->body);
