@@ -90,14 +90,14 @@ static void g_var(Expr *var)
 {
 	if(var->decl) {
 		if(is_var_used_in_func(var->decl)) {
-			write("*check_var(&%V, \"%T\")", var->decl, var->ident);
+			write("(*check_var(&%V, \"%T\"))", var->decl, var->ident);
 		}
 		else {
 			write("%V", var->decl);
 		}
 	}
 	else {
-		write("error(\"name %T is not defined\")", var->ident);
+		write("(*error(\"name %T is not defined\"))", var->ident);
 	}
 }
 
