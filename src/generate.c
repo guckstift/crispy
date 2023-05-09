@@ -94,22 +94,14 @@ static bool is_var_used_in_func(Decl *decl)
 
 static void g_var(Expr *var)
 {
-	if(var->decl) {
-		if(is_var_used_in_func(var->decl)) {
-			write(
-				"(*check_var(%i, &%V, \"%T\"))",
-				var->start->line, var->decl, var->ident
-			);
-		}
-		else {
-			write("%V", var->decl);
-		}
+	if(is_var_used_in_func(var->decl)) {
+		write(
+			"(*check_var(%i, &%V, \"%T\"))",
+			var->start->line, var->decl, var->ident
+		);
 	}
 	else {
-		write(
-			"(*error(%i, \"name %T is not defined\"))",
-			var->ident->line, var->ident
-		);
+		write("%V", var->decl);
 	}
 }
 

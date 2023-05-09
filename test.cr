@@ -1,1 +1,7 @@
-print "Hello World";
+function foo()
+{
+	print x;
+}
+
+foo();
+var x;

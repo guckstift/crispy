@@ -33,19 +33,21 @@ static void a_var(Expr *var)
 	var->decl = lookup(ident, cur_scope);
 	
 	if(!var->decl) {
-		return;
+		error_at(var->ident, "%T is not declared", var->ident);
 	}
 	
 	if(
 		var->decl->scope->parent &&
 		cur_scope->hosting_func != var->decl->scope->hosting_func
 	) {
-		// using outer local var in a nested function
-		var->decl = 0;
+		error_at(
+			var->ident, "can not use local variable %T in enclosed function",
+			var->ident
+		);
 	}
 	else if(ident < var->decl->end) {
 		if(var->decl->scope == cur_scope) {
-			var->decl = 0;
+			error_at(var->ident, "%T is declared later", var->ident);
 		}
 		else {
 			add_used_var_to_func(var->decl);
