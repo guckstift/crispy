@@ -1,2 +1,1 @@
-var x = 90;
-print x;
+print "Hello World";

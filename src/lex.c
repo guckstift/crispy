@@ -74,7 +74,7 @@ Token *lex(char *src, char *src_end)
 			token.type = TK_IDENT;
 			token.length = src - token.start;
 			
-			for(int i=0; i < sizeof(keywords) / sizeof(char*); i++) {
+			for(int i=0; i < KEYWORD_COUNT; i++) {
 				if(
 					strlen(keywords[i]) == token.length &&
 					memcmp(keywords[i], token.start, token.length) == 0
@@ -84,51 +84,43 @@ Token *lex(char *src, char *src_end)
 				}
 			}
 		}
-		else if(src[0] == '0' && src[1] == 'x') {
-			src += 2;
-			int64_t value = 0;
-			
-			while(isxdigit(*src)) {
-				value *= 16;
-				
-				if(*src >= '0' && *src <= '9') {
-					value += *src - '0';
-				}
-				else if(*src >= 'a' && *src <= 'f') {
-					value += *src - 'a' + 10;
-				}
-				else if(*src >= 'A' && *src <= 'F') {
-					value += *src - 'A' + 10;
-				}
-				
-				src ++;
-			}
-			
-			token.type = TK_INT;
-			token.length = src - token.start;
-			token.value = value;
-		}
-		else if(src[0] == '0' && src[1] == 'b') {
-			src += 2;
-			int64_t value = 0;
-			
-			while(*src == '0' || *src == '1') {
-				value *= 2;
-				value += *src - '0';
-				src ++;
-			}
-			
-			token.type = TK_INT;
-			token.length = src - token.start;
-			token.value = value;
-		}
 		else if(isdigit(*src)) {
 			int64_t value = 0;
 			
-			while(isdigit(*src)) {
-				value *= 10;
-				value += *src - '0';
-				src ++;
+			if(src[0] == '0' && src[1] == 'x') {
+				src += 2;
+				
+				while(isxdigit(*src)) {
+					value *= 16;
+					
+					if(*src >= '0' && *src <= '9') {
+						value += *src - '0';
+					}
+					else if(*src >= 'a' && *src <= 'f') {
+						value += *src - 'a' + 10;
+					}
+					else if(*src >= 'A' && *src <= 'F') {
+						value += *src - 'A' + 10;
+					}
+					
+					src ++;
+				}
+			}
+			else if(src[0] == '0' && src[1] == 'b') {
+				src += 2;
+				
+				while(*src == '0' || *src == '1') {
+					value *= 2;
+					value += *src - '0';
+					src ++;
+				}
+			}
+			else {
+				while(isdigit(*src)) {
+					value *= 10;
+					value += *src - '0';
+					src ++;
+				}
 			}
 			
 			token.type = TK_INT;
@@ -137,7 +129,6 @@ Token *lex(char *src, char *src_end)
 		}
 		else if(*src == '"') {
 			src ++;
-			char *start = src;
 			
 			while(*src != '"') {
 				if(src == src_end) {
@@ -166,13 +157,9 @@ Token *lex(char *src, char *src_end)
 				}
 			}
 			
-			int length = src - start;
-			char *text = calloc(length + 1, 1);
-			memcpy(text, start, length);
 			src ++;
 			token.type = TK_STRING;
 			token.length = src - token.start;
-			token.text = text;
 		}
 		else if(
 			src[0] == '=' && src[1] == '=' || src[0] == '!' && src[1] == '=' ||
@@ -180,7 +167,7 @@ Token *lex(char *src, char *src_end)
 		) {
 			token.type = TK_PUNCT;
 			token.length = 2;
-			token.punct = src[0] | src[1] << 8;
+			token.punct = IPUNCT(src);
 			src += 2;
 		}
 		else if(
@@ -229,6 +216,12 @@ Token *lex(char *src, char *src_end)
 				token->id = ident->id;
 				ident_table = ident;
 			}
+		}
+		else if(token->type == TK_STRING) {
+			int64_t length = token->length - 2;
+			token->text = malloc(length + 1);
+			token->text[length] = 0;
+			memcpy(token->text, token->start + 1, length);
 		}
 	}
 	

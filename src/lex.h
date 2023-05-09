@@ -30,6 +30,7 @@ typedef enum {
 	#define F(x) KW_ ## x,
 	KEYWORDS(F)
 	#undef F
+	KEYWORD_COUNT
 } Keyword;
 
 typedef struct Token {
