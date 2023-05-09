@@ -4,6 +4,13 @@
 #include <stdio.h>
 #include "lex.h"
 #include "print.h"
+#include "array.h"
+
+typedef struct Ident {
+	struct Ident *next;
+	int64_t length;
+	char id[];
+} Ident;
 
 char *keywords[] = {
 	#define F(x) #x,
@@ -11,15 +18,11 @@ char *keywords[] = {
 	#undef F
 };
 
-static int line = 1;
-static char *linep = 0;
-
-Tokens *lex(char *src, char *src_end)
+Token *lex(char *src, char *src_end)
 {
 	Token *tokens = 0;
-	int num_tokens = 0;
-	line = 1;
-	linep = src;
+	int64_t line = 1;
+	char *linep = src;
 	
 	while(src <= src_end) {
 		Token token = {.line = line, .linep = linep, .start = src};
@@ -64,24 +67,20 @@ Tokens *lex(char *src, char *src_end)
 			continue;
 		}
 		else if(isalpha(*src) || *src == '_') {
-			char *start = src;
-			
 			while(isalnum(*src) || *src == '_') {
 				src++;
 			}
 			
-			int length = src - start;
-			char *text = calloc(length + 1, 1);
-			memcpy(text, start, length);
 			token.type = TK_IDENT;
-			token.length = length;
-			token.text = text;
+			token.length = src - token.start;
 			
 			for(int i=0; i < sizeof(keywords) / sizeof(char*); i++) {
-				if(strcmp(keywords[i], text) == 0) {
+				if(
+					strlen(keywords[i]) == token.length &&
+					memcmp(keywords[i], token.start, token.length) == 0
+				) {
 					token.type = TK_KEYWORD;
 					token.keyword = i;
-					break;
 				}
 			}
 		}
@@ -204,15 +203,34 @@ Tokens *lex(char *src, char *src_end)
 			error_at(&token, "unknown token");
 		}
 		
-		num_tokens ++;
-		tokens = realloc(tokens, sizeof(Token) * num_tokens);
-		tokens[num_tokens - 1] = token;
+		array_push(tokens, token);
 	}
 	
-	Tokens *list = calloc(1, sizeof(Tokens));
-	list->tokens = tokens;
-	list->count = num_tokens;
-	list->eof_line = line;
+	Ident *ident_table = 0;
 	
-	return list;
+	array_for_ptr(tokens, Token, token) {
+		if(token->type == TK_IDENT) {
+			for(Ident *ident = ident_table; ident; ident = ident->next) {
+				if(
+					ident->length == token->length &&
+					memcmp(ident->id, token->start, token->length) == 0
+				) {
+					token->id = ident->id;
+					break;
+				}
+			}
+			
+			if(token->id == 0) {
+				Ident *ident = calloc(1, sizeof(Ident) + token->length + 1);
+				ident->next = ident_table;
+				ident->length = token->length;
+				ident->id[token->length] = 0;
+				memcpy(ident->id, token->start, token->length);
+				token->id = ident->id;
+				ident_table = ident;
+			}
+		}
+	}
+	
+	return tokens;
 }

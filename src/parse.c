@@ -32,7 +32,7 @@ static void error_after(char *msg, ...)
 static Decl *lookup_flat(Token *ident, Scope *scope)
 {
 	for(Decl *decl = scope->decls; decl; decl = decl->next) {
-		if(strcmp(decl->ident->text, ident->text) == 0) {
+		if(decl->ident->id == ident->id) {
 			return decl;
 		}
 	}

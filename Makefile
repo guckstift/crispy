@@ -1,8 +1,8 @@
 CFILES = \
-	main.c lex.c parse.c analyze.c generate.c print.c
+	main.c lex.c parse.c analyze.c generate.c print.c array.c
 
 HFILES = \
-	lex.h parse.h analyze.h generate.h print.h runtime.c.res.h ast.h
+	lex.h parse.h analyze.h generate.h print.h runtime.c.res.h ast.h array.h
 
 CFLAGS = \
 	-std=c17 -pedantic-errors

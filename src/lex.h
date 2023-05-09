@@ -40,20 +40,15 @@ typedef struct Token {
 	int64_t length;
 	union {
 		Keyword keyword;
+		char *id;
 		char *text;
 		int64_t value;
 		int64_t punct;
 	};
 } Token;
 
-typedef struct {
-	Token *tokens;
-	int64_t count;
-	int64_t eof_line;
-} Tokens;
-
 extern char *keywords[];
 
-Tokens *lex(char *src, char *src_end);
+Token *lex(char *src, char *src_end);
 
 #endif

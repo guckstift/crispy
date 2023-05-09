@@ -31,7 +31,7 @@ void verror_at(Token *at, char *msg, va_list args);
 void error_at(Token *at, char *msg, ...);
 void verror_after_t(Token *t, char *msg, va_list args);
 
-void print_tokens(Tokens *list);
+void print_tokens(Token *tokens);
 void print_token(Token *token);
 void print_scope(Scope *scope);
 void print_module(Module *module);

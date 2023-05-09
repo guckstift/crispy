@@ -1,7 +1,2 @@
-function foo()
-{
-	function bar()
-	{
-		return true;
-	}
-}
+var x = 90;
+print x;

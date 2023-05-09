@@ -5,6 +5,7 @@
 #include "analyze.h"
 #include "generate.h"
 #include "print.h"
+#include "array.h"
 
 static void error(char *msg)
 {
@@ -33,10 +34,10 @@ int main(int argc, char **argv)
 	src[filesize] = 0;
 	fread(src, 1, filesize, file);
 	
-	Tokens *tokens = lex(src, src + filesize);
+	Token *tokens = lex(src, src + filesize);
 	print_tokens(tokens);
 	
-	Module *module = parse(tokens->tokens);
+	Module *module = parse(tokens);
 	analyze(module);
 	print_module(module);
 	

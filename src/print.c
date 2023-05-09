@@ -1,6 +1,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include "print.h"
+#include "array.h"
 
 static void print_block(Block *block);
 static void print_expr(Expr *expr);
@@ -188,14 +189,15 @@ void print_token(Token *token)
 	print("%T", token);
 }
 
-void print_tokens(Tokens *list)
+void print_tokens(Token *tokens)
 {
+	int64_t eof_line = tokens[array_length(tokens) - 1].line;
 	int64_t line = 0;
-	int64_t space = dec_len(list->eof_line) + 2;
+	int64_t space = dec_len(eof_line) + 2;
 	
 	print(P_COL_SECTION "=== tokens ===\n" P_RESET);
 	
-	for(Token *token = list->tokens; token->type != TK_EOF; token ++) {
+	for(Token *token = tokens; token->type != TK_EOF; token ++) {
 		if(token->line != line) {
 			line = token->line;
 			print(P_COL_LINENO "%i:" P_RESET, line);
