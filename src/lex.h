@@ -47,8 +47,6 @@ typedef struct Token {
 	};
 } Token;
 
-extern char *keywords[];
-
 Token *lex(char *src, char *src_end);
 
 #endif

@@ -12,14 +12,14 @@ typedef struct Ident {
 	char id[];
 } Ident;
 
-char *keywords[] = {
-	#define F(x) #x,
-	KEYWORDS(F)
-	#undef F
-};
-
 Token *lex(char *src, char *src_end)
 {
+	static const char *keywords[] = {
+		#define F(x) #x,
+		KEYWORDS(F)
+		#undef F
+	};
+	
 	Token *tokens = 0;
 	int64_t line = 1;
 	char *linep = src;
