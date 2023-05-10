@@ -2,6 +2,7 @@
 #define AST_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "lex.h"
 
 typedef enum {
@@ -26,9 +27,9 @@ typedef enum {
 
 typedef struct Expr {
 	ExprType type;
-	int isconst;
-	int islvalue;
-	int has_tmps;
+	bool isconst : 1;
+	bool islvalue : 1;
+	bool has_tmps : 1;
 	int64_t tmp_id;
 	Token *start;
 	struct Expr *next;
@@ -146,6 +147,7 @@ typedef struct Scope {
 	int64_t scope_id;
 	int had_side_effects;
 	Decl *hosting_func;
+	int64_t tmp_count;
 } Scope;
 
 typedef struct Block {

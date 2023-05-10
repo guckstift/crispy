@@ -12,7 +12,6 @@ static Expr *p_expr();
 static Token *cur = 0;
 static Scope *cur_scope = 0;
 static int next_func_id = 0;
-static int next_tmp_id = 1;
 static int next_scope_id = 0;
 
 static void error(char *msg, ...)
@@ -88,9 +87,7 @@ static Token *eat_keyword(Keyword keyword)
 
 static Token *see_punct(char *punct)
 {
-	int64_t ipunct = punct[0] | punct[1] << 8;
-	
-	if(cur->type == TK_PUNCT && cur->punct == ipunct) {
+	if(cur->type == TK_PUNCT && cur->punct == IPUNCT(punct)) {
 		return cur;
 	}
 	
@@ -143,7 +140,7 @@ static Expr *p_array()
 	expr->type = EX_ARRAY;
 	expr->isconst = 0;
 	expr->has_tmps = 1;
-	expr->tmp_id = next_tmp_id++;
+	expr->tmp_id = cur_scope->tmp_count++;
 	expr->start = start;
 	expr->items = first;
 	expr->length = length;
@@ -240,7 +237,7 @@ static Expr *p_callexpr_x(Expr *callee)
 	expr->has_tmps = 1;
 	expr->start = callee->start;
 	expr->callee = callee;
-	expr->tmp_id = next_tmp_id++;
+	expr->tmp_id = cur_scope->tmp_count++;
 	expr->args = first;
 	expr->argcount = argcount;
 	cur_scope->had_side_effects = 1;
@@ -810,7 +807,6 @@ Module *parse(Token *tokens)
 	cur = tokens;
 	cur_scope = 0;
 	next_func_id = 0;
-	next_tmp_id = 1;
 	next_scope_id = 0;
 	Block *block = p_block(0);
 	
