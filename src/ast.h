@@ -32,6 +32,7 @@ typedef struct Expr {
 	bool has_tmps : 1;
 	int64_t tmp_id;
 	Token *start;
+	struct Scope *scope;
 	struct Expr *next;
 	
 	union {

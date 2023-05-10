@@ -67,6 +67,12 @@ static int declare(Decl *decl)
 	return 1;
 }
 
+static int64_t next_tmp_id()
+{
+	cur_scope->tmp_count ++;
+	return cur_scope->tmp_count;
+}
+
 static Token *eat_token(TokenType type)
 {
 	if(cur->type == type) {
@@ -140,8 +146,9 @@ static Expr *p_array()
 	expr->type = EX_ARRAY;
 	expr->isconst = 0;
 	expr->has_tmps = 1;
-	expr->tmp_id = cur_scope->tmp_count++;
+	expr->tmp_id = next_tmp_id();
 	expr->start = start;
+	expr->scope = cur_scope;
 	expr->items = first;
 	expr->length = length;
 	return expr;
@@ -170,6 +177,7 @@ static Expr *p_atom()
 	
 	Expr *expr = calloc(1, sizeof(Expr));
 	expr->start = token;
+	expr->scope = cur_scope;
 	
 	switch(token->type) {
 		case TK_INT:
@@ -236,8 +244,9 @@ static Expr *p_callexpr_x(Expr *callee)
 	expr->isconst = 0;
 	expr->has_tmps = 1;
 	expr->start = callee->start;
+	expr->scope = cur_scope;
 	expr->callee = callee;
-	expr->tmp_id = cur_scope->tmp_count++;
+	expr->tmp_id = next_tmp_id();
 	expr->args = first;
 	expr->argcount = argcount;
 	cur_scope->had_side_effects = 1;
@@ -262,6 +271,7 @@ static Expr *p_subscript_x(Expr *array)
 	expr->islvalue = 1;
 	expr->has_tmps = array->has_tmps || index->has_tmps;
 	expr->start = array->start;
+	expr->scope = cur_scope;
 	expr->array = array;
 	expr->index = index;
 	return expr;
@@ -309,6 +319,7 @@ static Expr *p_unary()
 	expr->isconst = subexpr->isconst;
 	expr->has_tmps = subexpr->has_tmps;
 	expr->start = op;
+	expr->scope = cur_scope;
 	expr->subexpr = subexpr;
 	expr->op = op;
 	return expr;
@@ -383,6 +394,7 @@ static Expr *p_binop(int level)
 		binop->isconst = left->isconst && right->isconst;
 		binop->has_tmps = left->has_tmps || right->has_tmps;
 		binop->start = left->start;
+		binop->scope = cur_scope;
 		binop->left = left;
 		binop->right = right;
 		binop->op = op;

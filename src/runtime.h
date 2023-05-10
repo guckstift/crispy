@@ -66,7 +66,6 @@ typedef struct ScopeFrame {
 	Value *values;
 	int64_t length;
 	char *funcname;
-	Temp *temps;
 } ScopeFrame;
 
 typedef struct MemBlock {

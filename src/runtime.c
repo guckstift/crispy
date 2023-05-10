@@ -21,22 +21,22 @@
 		).value \
 	} \
 
-#define PUSH_SCOPE(scope, fn) \
+#define PUSH_SCOPE(scope, func_name) \
 	cur_scope_frame = &(ScopeFrame){ \
 		.parent = cur_scope_frame, \
 		.funcframe = cur_scope_frame ? cur_scope_frame->funcframe : 0, \
 		.values = (Value*)&scope, \
 		.length = sizeof(scope) / sizeof(Value), \
-		.funcname = fn, \
+		.funcname = func_name, \
 	}; \
 
-#define PUSH_EMPTY_SCOPE(fn) \
+#define PUSH_EMPTY_SCOPE(func_name) \
 	cur_scope_frame = &(ScopeFrame){ \
 		.parent = cur_scope_frame, \
 		.funcframe = cur_scope_frame ? cur_scope_frame->funcframe : 0, \
 		.values = 0, \
 		.length = 0, \
-		.funcname = fn, \
+		.funcname = func_name, \
 	}; \
 
 #define POP_SCOPE() \
@@ -49,12 +49,6 @@
 	RETURN_SCOPE(); \
 	return expr; \
 } \
-
-#define TRACK_TEMP(tmp_expr) \
-	((cur_scope_frame->temps = &(Temp){ \
-		.prev = cur_scope_frame->temps, \
-		.value = tmp_expr, \
-	})->value) \
 
 typedef struct PrintFrame {
 	struct PrintFrame *parent;
@@ -230,10 +224,6 @@ static void gc_mark(Value value) {
 
 static void collect_garbage() {
 	for(ScopeFrame *frame = cur_scope_frame; frame; frame = frame->parent) {
-		for(Temp *temp = frame->temps; temp; temp = temp->prev) {
-			gc_mark(temp->value);
-		}
-		
 		for(int64_t i=0; i < frame->length; i++) {
 			Value value = frame->values[i];
 			gc_mark(value);
@@ -281,11 +271,6 @@ static void *mem_alloc(int64_t size) {
 	last_block = block;
 	block_count ++;
 	return block->data;
-}
-
-static void unwind_temps()
-{
-	cur_scope_frame->temps = 0;
 }
 
 static Array *new_array(int64_t length, ...) {
