@@ -220,7 +220,7 @@ static void g_expr(Expr *expr)
 
 static void g_scope(Scope *scope)
 {
-	if(scope->decl_count == 0) {
+	if(scope->decl_count == 0 && scope->tmp_count == 0) {
 		return;
 	}
 	
@@ -274,36 +274,47 @@ static void g_scope(Scope *scope)
 	}
 }
 
-static void g_tmp_assigns(Expr *expr)
-{
-	if(!expr->has_tmps) {
+static void walk_expr(
+	Expr *expr, bool (*previsitor)(Expr*), bool (*postvisitor)(Expr*)
+) {
+	if(!previsitor(expr)) {
 		return;
 	}
 	
 	if(expr->type == EX_BINOP) {
-		g_tmp_assigns(expr->left);
-		g_tmp_assigns(expr->right);
+		walk_expr(expr->left, previsitor, postvisitor);
+		walk_expr(expr->right, previsitor, postvisitor);
 	}
 	else if(expr->type == EX_CALL) {
-		g_tmp_assigns(expr->callee);
+		walk_expr(expr->callee, previsitor, postvisitor);
 		
 		for(Expr *arg = expr->args; arg; arg = arg->next) {
-			g_tmp_assigns(arg);
+			walk_expr(arg, previsitor, postvisitor);
 		}
 	}
 	else if(expr->type == EX_ARRAY) {
 		for(Expr *item = expr->items; item; item = item->next) {
-			g_tmp_assigns(item);
+			walk_expr(item, previsitor, postvisitor);
 		}
 	}
 	else if(expr->type == EX_SUBSCRIPT) {
-		g_tmp_assigns(expr->array);
-		g_tmp_assigns(expr->index);
+		walk_expr(expr->array, previsitor, postvisitor);
+		walk_expr(expr->index, previsitor, postvisitor);
 	}
 	else if(expr->type == EX_UNARY) {
-		g_tmp_assigns(expr->subexpr);
+		walk_expr(expr->subexpr, previsitor, postvisitor);
 	}
 	
+	postvisitor(expr);
+}
+
+static bool tmp_assign_previsitor(Expr *expr)
+{
+	return expr->has_tmps;
+}
+
+static bool tmp_assign_postvisitor(Expr *expr)
+{
 	if(expr->tmp_id > 0) {
 		write("%>");
 		g_tmpvar(expr);
@@ -311,6 +322,25 @@ static void g_tmp_assigns(Expr *expr)
 		g_expr_immed(expr);
 		write(";\n");
 	}
+}
+
+static void g_tmp_assigns(Expr *expr)
+{
+	walk_expr(expr, tmp_assign_previsitor, tmp_assign_postvisitor);
+}
+
+static bool tmp_clear_postvisitor(Expr *expr)
+{
+	if(expr->tmp_id > 0) {
+		write("%>");
+		g_tmpvar(expr);
+		write(".type = TYX_UNINITIALIZED;\n");
+	}
+}
+
+static void g_tmp_clears(Expr *expr)
+{
+	walk_expr(expr, tmp_assign_previsitor, tmp_clear_postvisitor);
 }
 
 static void g_vardecl(Decl *decl)
@@ -324,6 +354,7 @@ static void g_vardecl(Decl *decl)
 		
 		g_tmp_assigns(init);
 		write("%>%V = %E;\n", decl, init);
+		g_tmp_clears(init);
 	}
 }
 
@@ -332,20 +363,17 @@ static void g_assign(Stmt *assign)
 	g_tmp_assigns(assign->target);
 	g_tmp_assigns(assign->value);
 	write("%>%E = %E;\n", assign->target, assign->value);
+	g_tmp_clears(assign->target);
+	g_tmp_clears(assign->value);
 }
 
 static void g_print(Stmt *print)
 {
 	int64_t num = 0;
-	bool has_tmps = false;
 	
 	for(Expr *value = print->values; value; value = value->next) {
 		g_tmp_assigns(value);
 		num ++;
-		
-		if(value->has_tmps) {
-			has_tmps = true;
-		}
 	}
 	
 	write("%>print(%i", num);
@@ -355,6 +383,10 @@ static void g_print(Stmt *print)
 	}
 	
 	write("\n%>);\n");
+	
+	for(Expr *value = print->values; value; value = value->next) {
+		g_tmp_clears(value);
+	}
 }
 
 static void g_funcdecl(Decl *decl)
@@ -365,6 +397,13 @@ static void g_funcdecl(Decl *decl)
 			decl, decl, decl->params->length
 		);
 	}
+}
+
+static void g_callstmt(Stmt *stmt)
+{
+	g_tmp_assigns(stmt->call);
+	write("%>%E;\n", stmt->call);
+	g_tmp_clears(stmt->call);
 }
 
 static void g_return(Stmt *stmt)
@@ -386,12 +425,21 @@ static void g_if(Stmt *ifstmt)
 	g_tmp_assigns(ifstmt->cond);
 	write("%>if(truthy(%E)) {\n", ifstmt->cond);
 	
+	level ++;
+	g_tmp_clears(ifstmt->cond);
+	level --;
+	
 	g_block(ifstmt->body);
 	write("%>}\n");
 	write("%>else {\n");
 	
 	if(ifstmt->else_body) {
 		g_block(ifstmt->else_body);
+	}
+	else {
+		level ++;
+		g_tmp_clears(ifstmt->cond);
+		level --;
 	}
 	
 	write("%>}\n");
@@ -402,11 +450,16 @@ static void g_while(Stmt *whilestmt)
 	g_tmp_assigns(whilestmt->cond);
 	write("%>while(truthy(%E)) {\n", whilestmt->cond);
 	
+	level ++;
+	g_tmp_clears(whilestmt->cond);
+	level --;
+	
 	g_block(whilestmt->body);
 	level ++;
 	g_tmp_assigns(whilestmt->cond);
 	level --;
 	write("%>}\n");
+	g_tmp_clears(whilestmt->cond);
 }
 
 static void g_stmt(Stmt *stmt)
@@ -425,7 +478,7 @@ static void g_stmt(Stmt *stmt)
 			g_funcdecl(stmt->decl);
 			break;
 		case ST_CALL:
-			g_tmp_assigns(stmt->call);
+			g_callstmt(stmt);
 			break;
 		case ST_RETURN:
 			g_return(stmt);
@@ -457,7 +510,7 @@ static void g_block(Block *block)
 		func_name = "<main>";
 	}
 	
-	if(block->scope->decl_count > 0) {
+	if(block->scope->decl_count > 0 || block->scope->tmp_count > 0) {
 		write("%>PUSH_SCOPE(scope%i, ", block->scope->scope_id);
 	}
 	else {

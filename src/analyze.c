@@ -27,6 +27,15 @@ static void add_used_var_to_func(Decl *decl)
 	cur_funcdecl->used_vars = item;
 }
 
+static void make_temporary(Expr *expr)
+{
+	if(expr->tmp_id == 0) {
+		cur_scope->tmp_count ++;
+		expr->has_tmps = true;
+		expr->tmp_id = cur_scope->tmp_count;
+	}
+}
+
 static void a_var(Expr *var)
 {
 	Token *ident = var->ident;
@@ -62,13 +71,18 @@ static void a_callexpr(Expr *call)
 	for(Expr *arg = call->args; arg; arg = arg->next) {
 		a_expr(arg);
 	}
+	
+	make_temporary(call);
 }
 
 static void a_array(Expr *array)
 {
 	for(Expr *item = array->items; item; item = item->next) {
 		a_expr(item);
+		array->has_tmps = array->has_tmps || item->has_tmps;
 	}
+	
+	make_temporary(array);
 }
 
 static Expr *array_get(Expr *array, int64_t index)
@@ -90,6 +104,7 @@ static void a_subscript(Expr *subscript)
 	
 	a_expr(array);
 	a_expr(index);
+	subscript->has_tmps = array->has_tmps || index->has_tmps;
 	
 	if(
 		array->type == EX_ARRAY && index->isconst && index->type == EX_INT &&
@@ -127,6 +142,9 @@ static void a_binop(Expr *binop)
 		
 		binop->type = oplevel == OP_CMP ? EX_BOOL : EX_INT;
 	}
+	else {
+		binop->has_tmps = left->has_tmps || right->has_tmps;
+	}
 }
 
 static void a_unary(Expr *unary)
@@ -140,6 +158,9 @@ static void a_unary(Expr *unary)
 			unary->op->punct == '+' ? +unary->subexpr->value :
 			unary->op->punct == '-' ? -unary->subexpr->value :
 			0 /* should never happen */;
+	}
+	else {
+		unary->has_tmps = unary->subexpr->has_tmps;
 	}
 }
 
@@ -178,6 +199,10 @@ static void a_assign(Stmt *assign)
 {
 	a_expr(assign->target);
 	a_expr(assign->value);
+	
+	if(assign->target->islvalue == 0) {
+		error_at(assign->start, "target is not assignable");
+	}
 }
 
 static void a_print(Stmt *print)
@@ -200,6 +225,7 @@ static void a_funcdecl(Decl *funcdecl)
 static void a_call(Stmt *call)
 {
 	a_expr(call->call);
+	call->call->tmp_id = 0;
 }
 
 static void a_return(Stmt *returnstmt)

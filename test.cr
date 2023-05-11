@@ -1,12 +1,4 @@
+function foo(x) { return 0; }
 
-function foo()
-{
-	var x = [1,2,3];
-	var y = [[4],2,3];
-	print "H";
+while foo(1) {
 }
-
-foo();
-
-var x = [1,2,3];
-var y = [[4],2,3];

@@ -84,8 +84,8 @@ typedef struct Decl {
 	struct Scope *scope;
 	Token *ident;
 	Token *end;
-	int isfunc;
-	int init_deferred;
+	bool isfunc : 1;
+	bool init_deferred : 1;
 	
 	union {
 		Expr *init; // vardecl
@@ -94,7 +94,7 @@ typedef struct Decl {
 	
 	union {
 		int64_t func_id; // funcdecl
-		int is_param; // vardecl
+		bool is_param; // vardecl
 	};
 	
 	union {

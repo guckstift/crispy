@@ -54,23 +54,17 @@ Decl *lookup(Token *ident, Scope *scope)
 	return 0;
 }
 
-static int declare(Decl *decl)
+static bool declare(Decl *decl)
 {
 	if(lookup_flat(decl->ident, cur_scope)) {
-		return 0;
+		return false;
 	}
 	
 	decl->next = cur_scope->decls;
 	decl->scope = cur_scope;
 	cur_scope->decls = decl;
 	cur_scope->decl_count ++;
-	return 1;
-}
-
-static int64_t next_tmp_id()
-{
-	cur_scope->tmp_count ++;
-	return cur_scope->tmp_count;
+	return true;
 }
 
 static Token *eat_token(TokenType type)
@@ -144,9 +138,6 @@ static Expr *p_array()
 	
 	Expr *expr = calloc(1, sizeof(Expr));
 	expr->type = EX_ARRAY;
-	expr->isconst = 0;
-	expr->has_tmps = 1;
-	expr->tmp_id = next_tmp_id();
 	expr->start = start;
 	expr->scope = cur_scope;
 	expr->items = first;
@@ -182,28 +173,27 @@ static Expr *p_atom()
 	switch(token->type) {
 		case TK_INT:
 			expr->type = EX_INT;
-			expr->isconst = 1;
+			expr->isconst = true;
 			expr->value = token->value;
 			break;
 		case TK_STRING:
 			expr->type = EX_STRING;
-			expr->isconst = 1;
+			expr->isconst = true;
 			expr->string = token->text;
 			break;
 		case TK_IDENT:
 			expr->type = EX_VAR;
-			expr->isconst = 0;
-			expr->islvalue = 1;
+			expr->islvalue = true;
 			expr->ident = token;
 			break;
 		default:
 			if(token->keyword == KW_null) {
 				expr->type = EX_NULL;
-				expr->isconst = 1;
+				expr->isconst = true;
 			}
 			else {
 				expr->type = EX_BOOL;
-				expr->isconst = 1;
+				expr->isconst = true;
 				expr->value = token->keyword == KW_true;
 			}
 			
@@ -241,12 +231,9 @@ static Expr *p_callexpr_x(Expr *callee)
 	
 	Expr *expr = calloc(1, sizeof(Expr));
 	expr->type = EX_CALL;
-	expr->isconst = 0;
-	expr->has_tmps = 1;
 	expr->start = callee->start;
 	expr->scope = cur_scope;
 	expr->callee = callee;
-	expr->tmp_id = next_tmp_id();
 	expr->args = first;
 	expr->argcount = argcount;
 	cur_scope->had_side_effects = 1;
@@ -267,9 +254,7 @@ static Expr *p_subscript_x(Expr *array)
 	
 	Expr *expr = calloc(1, sizeof(Expr));
 	expr->type = EX_SUBSCRIPT;
-	expr->isconst = 0;
-	expr->islvalue = 1;
-	expr->has_tmps = array->has_tmps || index->has_tmps;
+	expr->islvalue = true;
 	expr->start = array->start;
 	expr->scope = cur_scope;
 	expr->array = array;
@@ -317,7 +302,6 @@ static Expr *p_unary()
 	Expr *expr = calloc(1, sizeof(Expr));
 	expr->type = EX_UNARY;
 	expr->isconst = subexpr->isconst;
-	expr->has_tmps = subexpr->has_tmps;
 	expr->start = op;
 	expr->scope = cur_scope;
 	expr->subexpr = subexpr;
@@ -392,7 +376,6 @@ static Expr *p_binop(int level)
 		Expr *binop = calloc(1, sizeof(Expr));
 		binop->type = EX_BINOP;
 		binop->isconst = left->isconst && right->isconst;
-		binop->has_tmps = left->has_tmps || right->has_tmps;
 		binop->start = left->start;
 		binop->scope = cur_scope;
 		binop->left = left;
@@ -444,7 +427,7 @@ static Stmt *p_vardecl()
 	decl->init = init;
 	
 	if(cur_scope->had_side_effects || init && !init->isconst) {
-		decl->init_deferred = 1;
+		decl->init_deferred = true;
 	}
 	
 	Stmt *stmt = calloc(1, sizeof(Stmt));
@@ -508,10 +491,6 @@ static Stmt *p_assign_or_call()
 	}
 	
 	if(eat_punct("=")) {
-		if(expr->islvalue == 0) {
-			error_at(expr->start, "target is not assignable");
-		}
-		
 		return p_assign_x(expr);
 	}
 	
@@ -619,8 +598,8 @@ static Stmt *p_funcdecl()
 	Decl *decl = calloc(1, sizeof(Decl));
 	decl->ident = ident;
 	decl->end = cur;
-	decl->isfunc = 1;
-	decl->init_deferred = 1;
+	decl->isfunc = true;
+	decl->init_deferred = true;
 	decl->body = body;
 	decl->func_id = func_id;
 	decl->params = params;
@@ -795,7 +774,7 @@ static Block *p_block(TokenList *params)
 			Decl *decl = calloc(1, sizeof(Decl));
 			decl->ident = item->token;
 			decl->end = item->token + 1;
-			decl->is_param = 1;
+			decl->is_param = true;
 			
 			if(!declare(decl)) {
 				error_at(
