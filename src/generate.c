@@ -581,7 +581,7 @@ void generate(Module *module)
 {
 	file = fopen(module->cfilename, "w");
 	level = 0;
-	write("#include \"runtime.c\"\n");
+	write("#include \"runtime.h\"\n");
 	write("// function prototypes:\n");
 	g_funcprotos(module->body);
 	write("// global scope:\n");

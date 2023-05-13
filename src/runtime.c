@@ -1,54 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include "runtime.h"
-
-#define BINOP(l, t, left, op, right) \
-	(Value){ \
-		.type = t, \
-		.value = check_type( \
-			l, TY_NULL, TY_INT, (left) \
-		).value op check_type( \
-			l, TY_NULL, TY_INT, (right) \
-		).value \
-	} \
-
-#define INT_UNARY(l, op, right) \
-	(Value){ \
-		.type = TY_INT, \
-		.value = op check_type( \
-			l, TY_NULL, TY_INT, (right) \
-		).value \
-	} \
-
-#define PUSH_SCOPE(scope, func_name) \
-	cur_scope_frame = &(ScopeFrame){ \
-		.parent = cur_scope_frame, \
-		.funcframe = cur_scope_frame ? cur_scope_frame->funcframe : 0, \
-		.values = (Value*)&scope, \
-		.length = sizeof(scope) / sizeof(Value), \
-		.funcname = func_name, \
-	}; \
-
-#define PUSH_EMPTY_SCOPE(func_name) \
-	cur_scope_frame = &(ScopeFrame){ \
-		.parent = cur_scope_frame, \
-		.funcframe = cur_scope_frame ? cur_scope_frame->funcframe : 0, \
-		.values = 0, \
-		.length = 0, \
-		.funcname = func_name, \
-	}; \
-
-#define POP_SCOPE() \
-	cur_scope_frame = cur_scope_frame->parent \
-
-#define RETURN_SCOPE() \
-	cur_scope_frame = cur_scope_frame->funcframe->parent \
-
-#define RETURN(expr) { \
-	RETURN_SCOPE(); \
-	return expr; \
-} \
 
 typedef struct PrintFrame {
 	struct PrintFrame *parent;
@@ -58,8 +10,9 @@ typedef struct PrintFrame {
 static void print_value(Value value);
 static void value_decref(Value value);
 
+ScopeFrame *cur_scope_frame = 0;
+
 static PrintFrame *cur_print_frame = 0;
-static ScopeFrame *cur_scope_frame = 0;
 static MemBlock *first_block = 0;
 static MemBlock *last_block = 0;
 static int64_t block_count = 0;
@@ -81,7 +34,7 @@ static Value *error(int64_t cur_line, char *msg, ...) {
 	return &NULL_VALUE;
 }
 
-static Value *check_var(int64_t cur_line, Value *var, char *name) {
+Value *check_var(int64_t cur_line, Value *var, char *name) {
 	if(var->type == TYX_UNINITIALIZED) {
 		error(cur_line, "name %s is not defined", name);
 	}
@@ -172,7 +125,7 @@ static void print_value(Value value) {
 	cur_print_frame = cur_print_frame->parent;
 }
 
-static void print(int64_t num, ...)
+void print(int64_t num, ...)
 {
 	va_list args;
 	va_start(args, num);
@@ -273,7 +226,7 @@ static void *mem_alloc(int64_t size) {
 	return block->data;
 }
 
-static Array *new_array(int64_t length, ...) {
+Array *new_array(int64_t length, ...) {
 	Value items[length];
 	PUSH_SCOPE(items, 0);
 	va_list args;
@@ -295,14 +248,14 @@ static Array *new_array(int64_t length, ...) {
 	return array;
 }
 
-static Function *new_function(FuncPtr funcptr, int64_t arity) {
+Function *new_function(FuncPtr funcptr, int64_t arity) {
 	Function *func = mem_alloc(sizeof(Function));
 	func->func = funcptr;
 	func->arity = arity;
 	return func;
 }
 
-static Value call(int64_t cur_line, Value value, int64_t argcount, ...) {
+Value call(int64_t cur_line, Value value, int64_t argcount, ...) {
 	if(value.type == TYX_UNINITIALIZED) {
 		error(cur_line, "function is not yet initialized");
 	}
@@ -324,7 +277,7 @@ static Value call(int64_t cur_line, Value value, int64_t argcount, ...) {
 	return result;
 }
 
-static Value *subscript(int64_t cur_line, Value array, Value index) {
+Value *subscript(int64_t cur_line, Value array, Value index) {
 	if(array.type != TY_ARRAY) {
 		error(cur_line, "this is not an array");
 	}
@@ -340,7 +293,7 @@ static Value *subscript(int64_t cur_line, Value array, Value index) {
 	return array.array->items + index.value;
 }
 
-static bool truthy(Value value) {
+bool truthy(Value value) {
 	if(value.type == TY_STRING) {
 		return value.string[0] != 0;
 	}

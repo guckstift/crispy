@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 #define NULL_VALUE_INIT       {.type = TY_NULL}
 #define NULL_VALUE            ((Value)NULL_VALUE_INIT)
@@ -19,6 +20,53 @@
 #define NEW_FUNCTION(...)  FUNCTION_VALUE(new_function(__VA_ARGS__))
 
 #define UNINITIALIZED  {.type = TYX_UNINITIALIZED}
+
+#define BINOP(l, t, left, op, right) \
+	(Value){ \
+		.type = t, \
+		.value = check_type( \
+			l, TY_NULL, TY_INT, (left) \
+		).value op check_type( \
+			l, TY_NULL, TY_INT, (right) \
+		).value \
+	} \
+
+#define INT_UNARY(l, op, right) \
+	(Value){ \
+		.type = TY_INT, \
+		.value = op check_type( \
+			l, TY_NULL, TY_INT, (right) \
+		).value \
+	} \
+
+#define PUSH_SCOPE(scope, func_name) \
+	cur_scope_frame = &(ScopeFrame){ \
+		.parent = cur_scope_frame, \
+		.funcframe = cur_scope_frame ? cur_scope_frame->funcframe : 0, \
+		.values = (Value*)&scope, \
+		.length = sizeof(scope) / sizeof(Value), \
+		.funcname = func_name, \
+	}; \
+
+#define PUSH_EMPTY_SCOPE(func_name) \
+	cur_scope_frame = &(ScopeFrame){ \
+		.parent = cur_scope_frame, \
+		.funcframe = cur_scope_frame ? cur_scope_frame->funcframe : 0, \
+		.values = 0, \
+		.length = 0, \
+		.funcname = func_name, \
+	}; \
+
+#define POP_SCOPE() \
+	cur_scope_frame = cur_scope_frame->parent \
+
+#define RETURN_SCOPE() \
+	cur_scope_frame = cur_scope_frame->funcframe->parent \
+
+#define RETURN(expr) { \
+	RETURN_SCOPE(); \
+	return expr; \
+} \
 
 typedef enum {
 	TY_NULL,
@@ -73,5 +121,15 @@ typedef struct MemBlock {
 	int64_t mark;
 	char data[];
 } MemBlock;
+
+Value *check_var(int64_t cur_line, Value *var, char *name);
+void print(int64_t num, ...);
+Array *new_array(int64_t length, ...);
+Function *new_function(FuncPtr funcptr, int64_t arity);
+Value call(int64_t cur_line, Value value, int64_t argcount, ...);
+Value *subscript(int64_t cur_line, Value array, Value index);
+bool truthy(Value value);
+
+extern ScopeFrame *cur_scope_frame;
 
 #endif
