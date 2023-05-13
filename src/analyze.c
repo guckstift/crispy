@@ -305,5 +305,5 @@ static void a_block(Block *block)
 void analyze(Module *module)
 {
 	cur_scope = 0;
-	a_block(module->block);
+	a_block(module->body);
 }

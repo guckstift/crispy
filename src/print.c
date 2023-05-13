@@ -473,10 +473,10 @@ static void print_block(Block *block)
 	}
 }
 
-void print_module(Module *module)
+void print_module_block(Block *body)
 {
 	print(P_COL_SECTION "=== module AST ===\n" P_RESET);
 	level = 0;
 	outfile = stdout;
-	print_block(module->block);
+	print_block(body);
 }

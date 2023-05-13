@@ -4,6 +4,6 @@
 #include <stdio.h>
 #include "parse.h"
 
-void generate(Module *module, FILE *outfile);
+void generate(Module *module);
 
 #endif

@@ -3,8 +3,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include "lex.h"
-#include "parse.h"
+#include "ast.h"
 
 #define P_CSI          "\x1b["
 #define P_RESET        P_CSI "0m"
@@ -34,7 +33,7 @@ void verror_after_t(Token *t, char *msg, va_list args);
 void print_tokens(Token *tokens);
 void print_token(Token *token);
 void print_scope(Scope *scope);
-void print_module(Module *module);
+void print_module_block(Block *body);
 void fprint_expr(FILE *fs, Expr *expr);
 
 #endif

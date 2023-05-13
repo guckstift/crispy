@@ -793,9 +793,9 @@ static Block *p_block(TokenList *params)
 	return block;
 }
 
-Module *parse(Token *tokens)
+void parse(Module *module)
 {
-	cur = tokens;
+	cur = module->tokens;
 	cur_scope = 0;
 	next_func_id = 0;
 	next_scope_id = 0;
@@ -805,7 +805,5 @@ Module *parse(Token *tokens)
 		error("unknown statement");
 	}
 	
-	Module *module = calloc(1, sizeof(Module));
-	module->block = block;
-	return module;
+	module->body = block;
 }

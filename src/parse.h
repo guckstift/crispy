@@ -4,6 +4,6 @@
 #include "ast.h"
 
 Decl *lookup(Token *ident, Scope *scope);
-Module *parse(Token *tokens);
+void parse(Module *module);
 
 #endif

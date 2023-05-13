@@ -577,21 +577,21 @@ static void g_funcimpls(Block *block)
 	}
 }
 
-void generate(Module *module, FILE *outfile)
+void generate(Module *module)
 {
-	file = outfile;
+	file = fopen(module->cfilename, "w");
 	level = 0;
-	
-	write("#include \"src/runtime.c\"\n");
+	write("#include \"runtime.c\"\n");
 	write("// function prototypes:\n");
-	g_funcprotos(module->block);
+	g_funcprotos(module->body);
 	write("// global scope:\n");
-	g_scope(module->block->scope);
+	g_scope(module->body->scope);
 	write("// function implementations:\n");
-	g_funcimpls(module->block);
+	g_funcimpls(module->body);
 	write("// main function:\n");
 	write("int main(int argc, char **argv) {\n");
-	g_block(module->block);
+	g_block(module->body);
 	write("\t""return 0;\n");
 	write("}\n");
+	fclose(file);
 }
