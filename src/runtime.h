@@ -124,6 +124,7 @@ typedef struct MemBlock {
 
 Value *check_var(int64_t cur_line, Value *var, char *name);
 void print(int64_t num, ...);
+Value check_type(int64_t cur_line, Type mintype, Type maxtype, Value value);
 Array *new_array(int64_t length, ...);
 Function *new_function(FuncPtr funcptr, int64_t arity);
 Value call(int64_t cur_line, Value value, int64_t argcount, ...);

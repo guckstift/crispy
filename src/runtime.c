@@ -142,9 +142,7 @@ void print(int64_t num, ...)
 	printf("\n");
 }
 
-static Value check_type(
-	int64_t cur_line, Type mintype, Type maxtype, Value value
-) {
+Value check_type(int64_t cur_line, Type mintype, Type maxtype, Value value) {
 	if(value.type < mintype || value.type > maxtype) {
 		error(cur_line, "wrong type");
 	}
