@@ -113,16 +113,6 @@ typedef struct DeclItem {
 	struct DeclItem *next;
 } DeclItem;
 
-typedef struct TokenItem {
-	Token *token;
-	struct TokenItem *next;
-} TokenItem;
-
-typedef struct {
-	TokenItem *items;
-	int64_t length;
-} TokenList;
-
 typedef struct Decl {
 	struct Decl *next; // next in scope
 	struct Scope *scope;
@@ -146,7 +136,7 @@ typedef struct Decl {
 	};
 	
 	union {
-		TokenList *params; // funcdecl
+		Token **params; // funcdecl
 	};
 } Decl;
 

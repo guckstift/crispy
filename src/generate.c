@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include "generate.h"
+#include "array.h"
 
 static void g_expr(Expr *expr);
 static void g_stmt(Stmt *stmt);
@@ -394,7 +395,7 @@ static void g_funcdecl(Decl *decl)
 	if(decl->init_deferred) {
 		write(
 			"%>%V = NEW_FUNCTION(%F, %i);\n",
-			decl, decl, decl->params->length
+			decl, decl, array_length(decl->params)
 		);
 	}
 }

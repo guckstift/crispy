@@ -341,14 +341,16 @@ static void print_print(Stmt *stmt)
 static void print_funcdecl(Decl *funcdecl)
 {
 	print("%>%K %T(", "function", funcdecl->ident);
-	TokenList *params = funcdecl->params;
+	Token **params = funcdecl->params;
 	
-	for(TokenItem *item = params->items; item; item = item->next) {
-		if(item != params->items) {
+	array_for(params, i) {
+		Token *param = params[i];
+		
+		if(i > 0) {
 			print(", ");
 		}
 		
-		print("%T", item->token);
+		print("%T", param);
 	}
 	
 	print(") {\n");

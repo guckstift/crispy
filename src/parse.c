@@ -4,9 +4,10 @@
 #include <string.h>
 #include "parse.h"
 #include "print.h"
+#include "array.h"
 
 static Stmt *p_stmts();
-static Block *p_block(TokenList *params);
+static Block *p_block(Token **params);
 static Expr *p_expr();
 
 static Token *cur = 0;
@@ -556,15 +557,11 @@ static Stmt *p_funcdecl()
 		error_after("expected '(' after function name");
 	}
 	
-	TokenList *params = calloc(1, sizeof(TokenList));
+	Token **params = 0;
 	Token *param = eat_token(TK_IDENT);
 	
 	if(param) {
-		TokenItem *item = calloc(1, sizeof(TokenItem));
-		item->token = param;
-		item->next = params->items;
-		params->items = item;
-		params->length = 1;
+		array_push(params, param);
 		
 		while(eat_punct(",")) {
 			Token *param = eat_token(TK_IDENT);
@@ -573,11 +570,7 @@ static Stmt *p_funcdecl()
 				error_after("expected another parameter after ','");
 			}
 			
-			TokenItem *item = calloc(1, sizeof(TokenItem));
-			item->token = param;
-			item->next = params->items;
-			params->items = item;
-			params->length ++;
+			array_push(params, param);
 		}
 	}
 	
@@ -762,7 +755,7 @@ static Stmt *p_stmts()
 	return first;
 }
 
-static Block *p_block(TokenList *params)
+static Block *p_block(Token **params)
 {
 	Scope *scope = calloc(1, sizeof(Scope));
 	scope->parent = cur_scope;
@@ -770,16 +763,15 @@ static Block *p_block(TokenList *params)
 	cur_scope = scope;
 	
 	if(params) {
-		for(TokenItem *item = params->items; item; item = item->next) {
+		array_for(params, i) {
+			Token *param = params[i];
 			Decl *decl = calloc(1, sizeof(Decl));
-			decl->ident = item->token;
-			decl->end = item->token + 1;
+			decl->ident = param;
+			decl->end = param + 1;
 			decl->is_param = true;
 			
 			if(!declare(decl)) {
-				error_at(
-					item->token, "parameter %T already declared", item->token
-				);
+				error_at(param, "parameter %T already declared", param);
 			}
 		}
 	}
