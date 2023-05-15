@@ -55,7 +55,7 @@ static void a_var(Expr *var)
 		);
 	}
 	else if(ident < var->decl->end) {
-		if(var->decl->scope == cur_scope) {
+		if(var->decl->scope->hosting_func == cur_scope->hosting_func) {
 			error_at(var->ident, "%T is declared later", var->ident);
 		}
 		else {
