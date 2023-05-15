@@ -44,7 +44,7 @@ static void a_var(Expr *var)
 		var->decl = 0;
 	}
 	else if(ident < var->decl->end) {
-		if(var->decl->scope == cur_scope) {
+		if(var->decl->scope->hosting_func == cur_scope->hosting_func) {
 			var->decl = 0;
 		}
 		else {
