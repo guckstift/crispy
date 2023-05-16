@@ -274,6 +274,13 @@ static void a_while(Stmt *stmt)
 	a_block(stmt->body);
 }
 
+static void a_for_in(Stmt *stmt)
+{
+	a_expr(stmt->iterable);
+	a_block(stmt->body);
+	make_temporary(stmt->iterable);
+}
+
 static void a_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
@@ -300,6 +307,9 @@ static void a_stmt(Stmt *stmt)
 			break;
 		case ST_WHILE:
 			a_while(stmt);
+			break;
+		case ST_FOR_IN:
+			a_for_in(stmt);
 			break;
 	}
 }

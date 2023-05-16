@@ -519,6 +519,41 @@ static void g_while(Stmt *whilestmt)
 	g_tmp_clears(whilestmt->cond);
 }
 
+static void g_for_in(Stmt *for_in)
+{
+	g_tmp_assigns(for_in->iterable);
+	
+	write(
+		"%>check_type(%i, TY_ARRAY, TY_ARRAY, %E);\n",
+		for_in->start->line, for_in->iterable
+	);
+	
+	write(
+		"%>for(int64_t i=0; i < %E.array->length; i++) {\n",
+		for_in->iterable
+	);
+	
+	level ++;
+	write("%>scope%i.m_i = NULL_VALUE;\n", for_in->iter->scope->scope_id);
+	level --;
+	
+	g_block(for_in->body);
+	
+	/*
+	level ++;
+	g_tmp_clears(whilestmt->cond);
+	level --;
+	
+	g_block(whilestmt->body);
+	level ++;
+	g_tmp_assigns(whilestmt->cond);
+	level --;
+	*/
+	
+	write("%>}\n");
+	g_tmp_clears(for_in->iterable);
+}
+
 static void g_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
@@ -545,6 +580,9 @@ static void g_stmt(Stmt *stmt)
 			break;
 		case ST_WHILE:
 			g_while(stmt);
+			break;
+		case ST_FOR_IN:
+			g_for_in(stmt);
 			break;
 	}
 }

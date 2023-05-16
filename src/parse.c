@@ -7,7 +7,7 @@
 #include "array.h"
 
 static Stmt *p_stmts();
-static Block *p_block(Token **params);
+static Block *p_block(Token **params, Scope *blockscope);
 static Expr *p_expr();
 
 static Token *cur = 0;
@@ -582,7 +582,7 @@ static Stmt *p_funcdecl()
 		error_after("expected '{'");
 	}
 	
-	Block *body = p_block(params);
+	Block *body = p_block(params, 0);
 	
 	if(!eat_punct("}")) {
 		error("expected '}' or another statement");
@@ -650,7 +650,7 @@ static Stmt *p_if()
 		error("expected '{'");
 	}
 	
-	Block *body = p_block(0);
+	Block *body = p_block(0, 0);
 	
 	if(!eat_punct("}")) {
 		error("expected '}' or another statement");
@@ -663,7 +663,7 @@ static Stmt *p_if()
 			error("expected '{'");
 		}
 		
-		else_body = p_block(0);
+		else_body = p_block(0, 0);
 		
 		if(!eat_punct("}")) {
 			error("expected '}' or another statement");
@@ -699,7 +699,7 @@ static Stmt *p_while()
 		error("expected '{'");
 	}
 	
-	Block *body = p_block(0);
+	Block *body = p_block(0, 0);
 	
 	if(!eat_punct("}")) {
 		error("expected '}' or another statement");
@@ -715,6 +715,60 @@ static Stmt *p_while()
 	return stmt;
 }
 
+static Stmt *p_for_in()
+{
+	Token *start = eat_keyword(KW_for);
+	
+	if(!start) {
+		return 0;
+	}
+	
+	Token *iter_ident = eat_token(TK_IDENT);
+	
+	if(!iter_ident) {
+		error("expected iterator variable name");
+	}
+	
+	if(!eat_keyword(KW_in)) {
+		error("expected in keyword");
+	}
+	
+	Expr *iterable = p_expr();
+	
+	if(!iterable) {
+		error("expected an iterable expression");
+	}
+	
+	if(!eat_punct("{")) {
+		error("expected '{'");
+	}
+	
+	Scope *blockscope = calloc(1, sizeof(Scope));
+	blockscope->parent = cur_scope;
+	blockscope->scope_id = next_scope_id ++;
+	cur_scope = blockscope;
+	
+	Decl *iter = calloc(1, sizeof(Decl));
+	iter->ident = iter_ident;
+	iter->end = iter_ident + 1;
+	declare(iter);
+	Block *body = p_block(0, blockscope);
+	
+	if(!eat_punct("}")) {
+		error("expected '}' or another statement");
+	}
+	
+	Stmt *stmt = calloc(1, sizeof(Stmt));
+	stmt->type = ST_FOR_IN;
+	stmt->start = start;
+	stmt->end = cur;
+	stmt->iterable = iterable;
+	stmt->iter = iter;
+	stmt->body = body;
+	
+	return stmt;
+}
+
 static Stmt *p_stmt()
 {
 	Stmt *stmt;
@@ -725,6 +779,7 @@ static Stmt *p_stmt()
 	(stmt = p_return()) ||
 	(stmt = p_if()) ||
 	(stmt = p_while()) ||
+	(stmt = p_for_in()) ||
 	(stmt = p_assign_or_call()) ;
 	
 	return stmt;
@@ -755,11 +810,16 @@ static Stmt *p_stmts()
 	return first;
 }
 
-static Block *p_block(Token **params)
+static Block *p_block(Token **params, Scope *blockscope)
 {
-	Scope *scope = calloc(1, sizeof(Scope));
-	scope->parent = cur_scope;
-	scope->scope_id = next_scope_id ++;
+	Scope *scope = blockscope;
+	
+	if(scope == 0) {
+		scope = calloc(1, sizeof(Scope));
+		scope->parent = cur_scope;
+		scope->scope_id = next_scope_id ++;
+	}
+	
 	cur_scope = scope;
 	
 	if(params) {
@@ -791,7 +851,7 @@ void parse(Module *module)
 	cur_scope = 0;
 	next_func_id = 0;
 	next_scope_id = 0;
-	Block *block = p_block(0);
+	Block *block = p_block(0, 0);
 	
 	if(!eat_token(TK_EOF)) {
 		error("unknown statement");

@@ -353,10 +353,10 @@ static void print_funcdecl(Decl *funcdecl)
 		
 		for(DeclItem *item = funcdecl->enclosed; item; item = item->next) {
 			if(item != funcdecl->enclosed) {
-				printf(", ");
+				printf(",");
 			}
 			
-			print("%T ", item->decl->ident);
+			print("%T", item->decl->ident);
 		}
 	}
 	
@@ -415,6 +415,17 @@ static void print_while(Stmt *stmt)
 	print("%>}\n");
 }
 
+static void print_for_in(Stmt *stmt)
+{
+	print("%>for %T in ", stmt->iter->ident);
+	print_expr(stmt->iterable);
+	print(" {\n");
+	level++;
+	print_block(stmt->body);
+	level--;
+	print("%>}\n");
+}
+
 static void print_stmt(Stmt *stmt)
 {
 	switch(stmt->type) {
@@ -441,6 +452,9 @@ static void print_stmt(Stmt *stmt)
 			break;
 		case ST_WHILE:
 			print_while(stmt);
+			break;
+		case ST_FOR_IN:
+			print_for_in(stmt);
 			break;
 	}
 }

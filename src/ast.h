@@ -17,6 +17,8 @@
 	f(if) \
 	f(else) \
 	f(while) \
+	f(for) \
+	f(in) \
 
 typedef enum {
 	TK_KEYWORD,
@@ -155,6 +157,7 @@ typedef enum {
 	ST_RETURN,
 	ST_IF,
 	ST_WHILE,
+	ST_FOR_IN,
 } StmtType;
 
 typedef struct Stmt {
@@ -167,6 +170,7 @@ typedef struct Stmt {
 		Decl *decl; // vardecl, funcdecl
 		Expr *target; // assign
 		Expr *cond; // if, while
+		Expr *iterable; // for-in
 	};
 	
 	union {
@@ -178,6 +182,7 @@ typedef struct Stmt {
 	
 	union {
 		struct Block *else_body; // if
+		Decl *iter; // for-in
 	};
 } Stmt;
 
