@@ -21,6 +21,8 @@
 
 #define UNINITIALIZED  {.type = TYX_UNINITIALIZED}
 
+#define REFERENCE(v) ((Value){.type = TYX_REFERENCE, .ref = (v)})
+
 #define BINOP(l, t, left, op, right) \
 	(Value){ \
 		.type = t, \
@@ -68,6 +70,14 @@
 	return expr; \
 } \
 
+// #define DEBUG_ENABLED
+
+#ifdef DEBUG_ENABLED
+	#define DEBUG_printf  printf
+#else
+	#define DEBUG_printf(...)
+#endif
+
 typedef enum {
 	TY_NULL,
 	TY_BOOL,
@@ -77,6 +87,7 @@ typedef enum {
 	TY_FUNCTION,
 	
 	TYX_UNINITIALIZED,
+	TYX_REFERENCE,
 } Type;
 
 typedef struct Value {
@@ -88,6 +99,7 @@ typedef struct Value {
 		struct Array *array;
 		struct Function *func;
 		void *ptr;
+		struct Value *ref;
 	};
 } Value;
 
@@ -96,11 +108,13 @@ typedef struct Array {
 	Value items[];
 } Array;
 
-typedef Value (*FuncPtr)(va_list args);
+typedef Value (*FuncPtr)(Value *enclosed, va_list args);
 
 typedef struct Function {
 	FuncPtr func;
 	int64_t arity;
+	int64_t enclosed_count;
+	Value enclosed[];
 } Function;
 
 typedef struct Temp {
@@ -126,7 +140,11 @@ Value *check_var(int64_t cur_line, Value *var, char *name);
 void print(int64_t num, ...);
 Value check_type(int64_t cur_line, Type mintype, Type maxtype, Value value);
 Array *new_array(int64_t length, ...);
-Function *new_function(FuncPtr funcptr, int64_t arity);
+
+Function *new_function(
+	FuncPtr funcptr, int64_t arity, int64_t enclosed_count, ...
+);
+
 Value call(int64_t cur_line, Value value, int64_t argcount, ...);
 Value *subscript(int64_t cur_line, Value array, Value index);
 bool truthy(Value value);

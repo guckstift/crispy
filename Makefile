@@ -20,7 +20,10 @@ crispy: $(SRCS) $(HDRS) $(XXDIS)
 test: crispy test.cr
 	./crispy test.cr
 
+tests:
+	make -C tests
+
 src/%.xxdi: src/%
 	xxd -i $^ > $@
 
-.PHONY: test
+.PHONY: test tests

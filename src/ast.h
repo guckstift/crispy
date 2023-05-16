@@ -40,6 +40,7 @@ typedef struct Token {
 	char *linep;
 	char *start;
 	int64_t length;
+	
 	union {
 		Keyword keyword;
 		char *id;
@@ -111,6 +112,7 @@ typedef struct Expr {
 typedef struct DeclItem {
 	struct Decl *decl;
 	struct DeclItem *next;
+	int64_t id;
 } DeclItem;
 
 typedef struct Decl {
@@ -137,6 +139,10 @@ typedef struct Decl {
 	
 	union {
 		Token **params; // funcdecl
+	};
+	
+	union {
+		DeclItem *enclosed; // funcdecl
 	};
 } Decl;
 
@@ -167,7 +173,7 @@ typedef struct Stmt {
 		Expr *value; // assign, return
 		Expr *values; // print
 		Expr *call; // call
-		struct Block *body; // funcdecl, if, while
+		struct Block *body; // if, while
 	};
 	
 	union {

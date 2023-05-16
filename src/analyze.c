@@ -13,8 +13,6 @@ static Decl *cur_funcdecl = 0;
 
 static void add_used_var_to_func(Decl *decl)
 {
-	DeclItem *vars = cur_funcdecl->used_vars;
-	
 	for(DeclItem *item = cur_funcdecl->used_vars; item; item = item->next) {
 		if(decl == item->decl) {
 			return;
@@ -25,6 +23,28 @@ static void add_used_var_to_func(Decl *decl)
 	item->decl = decl;
 	item->next = cur_funcdecl->used_vars;
 	cur_funcdecl->used_vars = item;
+}
+
+static void add_enclosed_var_to_func(Decl *decl, Decl *funcdecl)
+{
+	for(DeclItem *item = funcdecl->enclosed; item; item = item->next) {
+		if(decl == item->decl) {
+			return;
+		}
+	}
+	
+	DeclItem *item = calloc(1, sizeof(DeclItem));
+	item->decl = decl;
+	item->next = funcdecl->enclosed;
+	item->id = item->next ? item->next->id + 1 : 0;
+	funcdecl->enclosed = item;
+	
+	Scope *funcparentscope = cur_funcdecl->scope;
+	Decl *parentfunc = funcparentscope->hosting_func;
+	
+	if(parentfunc && parentfunc != decl->scope->hosting_func) {
+		add_enclosed_var_to_func(decl, parentfunc);
+	}
 }
 
 static void make_temporary(Expr *expr)
@@ -49,10 +69,7 @@ static void a_var(Expr *var)
 		var->decl->scope->parent &&
 		cur_scope->hosting_func != var->decl->scope->hosting_func
 	) {
-		error_at(
-			var->ident, "can not use local variable %T in enclosed function",
-			var->ident
-		);
+		add_enclosed_var_to_func(var->decl, cur_funcdecl);
 	}
 	else if(ident < var->decl->end) {
 		if(var->decl->scope->hosting_func == cur_scope->hosting_func) {

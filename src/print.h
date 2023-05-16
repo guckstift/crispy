@@ -34,6 +34,5 @@ void print_tokens(Token *tokens);
 void print_token(Token *token);
 void print_scope(Scope *scope);
 void print_module_block(Block *body);
-void fprint_expr(FILE *fs, Expr *expr);
 
 #endif

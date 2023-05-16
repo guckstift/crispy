@@ -1,2 +1,4 @@
 crispy
 src/*.xxdi
+tests/*
+!tests/*.*

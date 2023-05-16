@@ -7,7 +7,6 @@ static void print_block(Block *block);
 static void print_expr(Expr *expr);
 
 static int level = 0;
-static FILE *outfile = 0;
 
 void vfprint(FILE *fs, char *msg, va_list args)
 {
@@ -296,12 +295,6 @@ static void print_expr(Expr *expr)
 	}
 }
 
-void fprint_expr(FILE *fs, Expr *expr)
-{
-	outfile = fs;
-	print_expr(expr);
-}
-
 static void print_vardecl(Decl *vardecl)
 {
 	print("%>%K %T", "var", vardecl->ident);
@@ -353,7 +346,21 @@ static void print_funcdecl(Decl *funcdecl)
 		print("%T", param);
 	}
 	
-	print(") {\n");
+	print(") {");
+	
+	if(funcdecl->enclosed) {
+		printf(P_COL_COMMENT " # enclosing=");
+		
+		for(DeclItem *item = funcdecl->enclosed; item; item = item->next) {
+			if(item != funcdecl->enclosed) {
+				printf(", ");
+			}
+			
+			print("%T ", item->decl->ident);
+		}
+	}
+	
+	print(P_RESET "\n");
 	level++;
 	print_block(funcdecl->body);
 	level--;
@@ -440,7 +447,6 @@ static void print_stmt(Stmt *stmt)
 
 void print_scope(Scope *scope)
 {
-	outfile = stdout;
 	print("%>" P_COL_COMMENT "# scope %p", scope);
 	
 	if(scope->hosting_func) {
@@ -479,6 +485,5 @@ void print_module_block(Block *body)
 {
 	print(P_COL_SECTION "=== module AST ===\n" P_RESET);
 	level = 0;
-	outfile = stdout;
 	print_block(body);
 }

@@ -93,13 +93,51 @@ static bool is_var_used_in_func(Decl *decl)
 	return false;
 }
 
-static void g_var(Expr *var)
+static bool is_var_enclosed_in_func(Decl *decl)
+{
+	if(cur_funcdecl == 0) {
+		return false;
+	}
+	
+	for(DeclItem *item = cur_funcdecl->enclosed; item; item = item->next) {
+		if(decl == item->decl) {
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+static int64_t enclosed_id(Decl *decl)
+{
+	if(cur_funcdecl == 0 || cur_funcdecl->enclosed == 0) {
+		return -1;
+	}
+	
+	for(DeclItem *item = cur_funcdecl->enclosed; item; item = item->next) {
+		if(decl == item->decl) {
+			return cur_funcdecl->enclosed->id - item->id;
+		}
+	}
+	
+	return -1;
+}
+
+static void g_var(Expr *var, bool no_deref)
 {
 	if(is_var_used_in_func(var->decl)) {
 		write(
 			"(*check_var(%i, &%V, \"%T\"))",
 			var->start->line, var->decl, var->ident
 		);
+	}
+	else if(is_var_enclosed_in_func(var->decl)) {
+		if(no_deref) {
+			write("enclosed[%i]", enclosed_id(var->decl));
+		}
+		else {
+			write("*enclosed[%i].ref", enclosed_id(var->decl));
+		}
 	}
 	else {
 		write("%V", var->decl);
@@ -181,7 +219,7 @@ static void g_expr_immed(Expr *expr)
 			write("STRING_VALUE(\"%s\")", expr->string);
 			break;
 		case EX_VAR:
-			g_var(expr);
+			g_var(expr, false);
 			break;
 		case EX_BINOP:
 			g_binop(expr);
@@ -390,13 +428,31 @@ static void g_print(Stmt *print)
 	}
 }
 
-static void g_funcdecl(Decl *decl)
+static void g_funcdecl(Decl *func)
 {
-	if(decl->init_deferred) {
+	if(func->init_deferred) {
+		int64_t enclosed_count = func->enclosed ? func->enclosed->id + 1 : 0;
+		
 		write(
-			"%>%V = NEW_FUNCTION(%F, %i);\n",
-			decl, decl, array_length(decl->params)
+			"%>%V = NEW_FUNCTION(%F, %i, %i",
+			func, func, array_length(func->params), enclosed_count
 		);
+		
+		for(DeclItem *item = func->enclosed; item; item = item->next) {
+			write(", &");
+			
+			g_var(
+				&(Expr){
+					.type = EX_VAR,
+					.decl = item->decl,
+					.start = func->ident,
+					.ident = func->ident,
+				},
+				true
+			);
+		}
+		
+		write(");\n");
 	}
 }
 
@@ -539,7 +595,7 @@ static void g_block(Block *block)
 
 static void g_funcproto(Decl *funcdecl)
 {
-	write("Value %F(va_list args);\n", funcdecl);
+	write("Value %F(Value *enclosed, va_list args);\n", funcdecl);
 }
 
 static void g_funcprotos(Block *block)
@@ -558,7 +614,7 @@ static void g_funcprotos(Block *block)
 static void g_funcimpl(Decl *funcdecl)
 {
 	cur_funcdecl = funcdecl;
-	write("Value %F(va_list args) {\n", funcdecl);
+	write("Value %F(Value *enclosed, va_list args) {\n", funcdecl);
 	g_block(funcdecl->body);
 	write("\t""return NULL_VALUE;\n");
 	write("}\n");

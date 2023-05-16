@@ -17,7 +17,8 @@ static MemBlock *first_block = 0;
 static MemBlock *last_block = 0;
 static int64_t block_count = 0;
 
-static Value *error(int64_t cur_line, char *msg, ...) {
+static Value *error(int64_t cur_line, char *msg, ...)
+{
 	va_list args;
 	va_start(args, msg);
 	fprintf(stderr, "error at line %li: ", cur_line);
@@ -34,7 +35,8 @@ static Value *error(int64_t cur_line, char *msg, ...) {
 	return &NULL_VALUE;
 }
 
-Value *check_var(int64_t cur_line, Value *var, char *name) {
+Value *check_var(int64_t cur_line, Value *var, char *name)
+{
 	if(var->type == TYX_UNINITIALIZED) {
 		error(cur_line, "name %s is not defined", name);
 	}
@@ -42,7 +44,8 @@ Value *check_var(int64_t cur_line, Value *var, char *name) {
 	return var;
 }
 
-static void print_repr(Value value) {
+static void print_repr(Value value)
+{
 	if(value.type == TY_STRING) {
 		printf("\"");
 		
@@ -73,7 +76,8 @@ static void print_repr(Value value) {
 	}
 }
 
-static void print_array(Array *array) {
+static void print_array(Array *array)
+{
 	for(
 		PrintFrame *frame = cur_print_frame->parent;
 		frame; frame = frame->parent
@@ -97,7 +101,8 @@ static void print_array(Array *array) {
 	printf("]");
 }
 
-static void print_value(Value value) {
+static void print_value(Value value)
+{
 	PrintFrame frame = {.parent = cur_print_frame, .value = value};
 	cur_print_frame = &frame;
 	
@@ -142,7 +147,8 @@ void print(int64_t num, ...)
 	printf("\n");
 }
 
-Value check_type(int64_t cur_line, Type mintype, Type maxtype, Value value) {
+Value check_type(int64_t cur_line, Type mintype, Type maxtype, Value value)
+{
 	if(value.type < mintype || value.type > maxtype) {
 		error(cur_line, "wrong type");
 	}
@@ -150,9 +156,13 @@ Value check_type(int64_t cur_line, Type mintype, Type maxtype, Value value) {
 	return value;
 }
 
-static void gc_mark(Value value) {
-	if(value.type == TY_ARRAY) {
-		MemBlock *block = (MemBlock*)value.ptr;
+static void gc_mark(Value value)
+{
+	if(
+		value.type == TY_ARRAY || value.type == TY_FUNCTION ||
+		value.type == TYX_REFERENCE
+	) {
+		MemBlock *block = value.ptr;
 		block --;
 		
 		if(block->mark == 1) {
@@ -160,6 +170,11 @@ static void gc_mark(Value value) {
 		}
 		
 		block->mark = 1;
+		
+		DEBUG_printf("  gc marked block %p\n", (void*)block);
+	}
+	
+	if(value.type == TY_ARRAY) {
 		Array *array = value.array;
 		
 		for(int64_t i=0; i < array->length; i++) {
@@ -167,13 +182,20 @@ static void gc_mark(Value value) {
 		}
 	}
 	else if(value.type == TY_FUNCTION) {
-		MemBlock *block = (MemBlock*)value.ptr;
-		block --;
-		block->mark = 1;
+		Function *func = value.func;
+		
+		for(int64_t i=0; i < func->enclosed_count; i++) {
+			gc_mark(func->enclosed[i]);
+		}
+	}
+	else if(value.type == TYX_REFERENCE) {
+		Value *ref = value.ref;
+		gc_mark(*ref);
 	}
 }
 
-static void collect_garbage() {
+static void collect_garbage()
+{
 	for(ScopeFrame *frame = cur_scope_frame; frame; frame = frame->parent) {
 		for(int64_t i=0; i < frame->length; i++) {
 			Value value = frame->values[i];
@@ -184,6 +206,8 @@ static void collect_garbage() {
 	for(MemBlock *block = first_block, *prev = 0; block;) {
 		if(block->mark == 0) {
 			((int64_t*)block->data)[0] = 0;
+			
+			DEBUG_printf("freeing %p\n", (void*)block);
 			
 			if(block == first_block) {
 				first_block = block->next;
@@ -208,7 +232,8 @@ static void collect_garbage() {
 	}
 }
 
-static void *mem_alloc(int64_t size) {
+static void *mem_alloc(int64_t size)
+{
 	collect_garbage();
 	MemBlock *block = calloc(1, sizeof(MemBlock) + size);
 	
@@ -221,10 +246,14 @@ static void *mem_alloc(int64_t size) {
 	
 	last_block = block;
 	block_count ++;
+	
+	DEBUG_printf("alloced %p size %li\n", (void*)block, size);
+	
 	return block->data;
 }
 
-Array *new_array(int64_t length, ...) {
+Array *new_array(int64_t length, ...)
+{
 	Value items[length];
 	PUSH_SCOPE(items, 0);
 	va_list args;
@@ -246,14 +275,66 @@ Array *new_array(int64_t length, ...) {
 	return array;
 }
 
-Function *new_function(FuncPtr funcptr, int64_t arity) {
-	Function *func = mem_alloc(sizeof(Function));
+Value uplift_var(Value *var)
+{
+	DEBUG_printf("new uplift\n");
+	
+	Value *lifted = mem_alloc(sizeof(Value));
+	*lifted = *var;
+	*var = REFERENCE(lifted);
+	return *var;
+}
+
+Function *new_function(
+	FuncPtr funcptr, int64_t arity, int64_t enclosed_count, ...
+) {
+	DEBUG_printf(
+		"new function %li %li size %li\n",
+		arity, enclosed_count,
+		sizeof(Function) + enclosed_count * sizeof(Value)
+	);
+	
+	Function *func = mem_alloc(
+		sizeof(Function) + enclosed_count * sizeof(Value)
+	);
+	
+	int64_t tmp_count = 1 + enclosed_count;
+	Value tmp[tmp_count];
+	
+	for(int64_t i=0; i < tmp_count; i++) {
+		tmp[i].type = TYX_UNINITIALIZED;
+	}
+	
+	tmp[0] = FUNCTION_VALUE(func);
+	PUSH_SCOPE(tmp, 0);
+	
 	func->func = funcptr;
 	func->arity = arity;
+	func->enclosed_count = enclosed_count;
+	va_list args;
+	va_start(args, enclosed_count);
+	
+	for(int64_t i=0; i < enclosed_count; i++) {
+		Value *var = va_arg(args, Value*);
+		
+		if(var->type == TYX_REFERENCE) {
+			func->enclosed[i] = *var;
+			DEBUG_printf("already uplifted\n");
+		}
+		else {
+			func->enclosed[i] = uplift_var(var);
+		}
+		
+		tmp[1 + i] = func->enclosed[i];
+	}
+	
+	va_end(args);
+	POP_SCOPE();
 	return func;
 }
 
-Value call(int64_t cur_line, Value value, int64_t argcount, ...) {
+Value call(int64_t cur_line, Value value, int64_t argcount, ...)
+{
 	if(value.type == TYX_UNINITIALIZED) {
 		error(cur_line, "function is not yet initialized");
 	}
@@ -268,14 +349,17 @@ Value call(int64_t cur_line, Value value, int64_t argcount, ...) {
 		);
 	}
 	
+	Function *func = value.func;
 	va_list args;
 	va_start(args, argcount);
-	Value result = value.func->func(args);
+	
+	Value result = func->func(func->enclosed, args);
 	va_end(args);
 	return result;
 }
 
-Value *subscript(int64_t cur_line, Value array, Value index) {
+Value *subscript(int64_t cur_line, Value array, Value index)
+{
 	if(array.type != TY_ARRAY) {
 		error(cur_line, "this is not an array");
 	}
@@ -291,7 +375,8 @@ Value *subscript(int64_t cur_line, Value array, Value index) {
 	return array.array->items + index.value;
 }
 
-bool truthy(Value value) {
+bool truthy(Value value)
+{
 	if(value.type == TY_STRING) {
 		return value.string[0] != 0;
 	}
